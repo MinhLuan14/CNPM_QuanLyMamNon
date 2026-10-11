@@ -9,6 +9,7 @@ import {
 import './App.css'
 import Sidebar from './components/Sidebar'
 import Header from './components/Header'
+import Login from './pages/login/Login'
 const menuItems = [
   { title: 'Tổng quan', icon: LayoutDashboard },
   { title: 'Quản lý trẻ', icon: Baby },
@@ -21,7 +22,7 @@ const menuItems = [
   { title: 'Tài khoản & phân quyền', icon: ShieldCheck },
 ]
 
-function App() {
+function Dashboard() {
   const [active, setActive] = useState('Tổng quan')
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
@@ -42,6 +43,11 @@ function App() {
       </main>
     </div>
   )
+}
+
+function App() {
+  const path = window.location.pathname.replace(/\/+$/, '') || '/'
+  return path === '/' || path === '/login' ? <Login /> : <Dashboard />
 }
 
 function StatCard({ icon: Icon, color, label, value, note, change }) {
