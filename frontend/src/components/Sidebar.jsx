@@ -11,7 +11,8 @@ import {
     ShieldCheck,
     X,
 } from 'lucide-react'
-
+import logoImg from '../assets/Logo.png'
+import '../assets/CSS/Sidebar.css'
 const menuItems = [
     { title: 'Tổng quan', icon: LayoutDashboard },
     { title: 'Quản lý trẻ', icon: Baby },
@@ -29,7 +30,15 @@ function Sidebar({
     setActive,
     sidebarOpen,
     setSidebarOpen,
+    role,
 }) {
+    const allowedMenus = {
+        ADMIN: menuItems.map((item) => item.title),
+        GIAOVIEN: ['Tổng quan', 'Quản lý trẻ', 'Quản lý phụ huynh', 'Quản lý lớp học', 'Thực đơn', 'Học phí & tiền ăn'],
+        PHUHUYNH: ['Tổng quan', 'Quản lý trẻ', 'Thực đơn', 'Học phí & tiền ăn', 'Thanh toán'],
+    }
+    const visibleMenuItems = menuItems.filter((item) => (allowedMenus[role] || ['Tổng quan']).includes(item.title))
+
     return (
         <>
             {sidebarOpen && (
@@ -44,7 +53,7 @@ function Sidebar({
                 className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}
             >
                 <div className="brand">
-                    <div className="brand-logo">🦈</div>
+                    <img src={logoImg} alt="BabyShark" className="brand-logo" />
 
                     <div>
                         <h2>babyShark</h2>
@@ -60,10 +69,8 @@ function Sidebar({
                     </button>
                 </div>
 
-                <div className="menu-label">MENU CHÍNH</div>
-
                 <nav className="sidebar-menu">
-                    {menuItems.map((item) => {
+                    {visibleMenuItems.map((item) => {
                         const Icon = item.icon
 
                         return (

@@ -5,8 +5,21 @@ import {
     Search,
     ChevronDown,
 } from 'lucide-react'
+import { authRequest, fetchCsrfToken } from '../api/auth'
+import '../assets/CSS/Header.css'
+function Header({ active, setSidebarOpen, user, onLogout }) {
+    const handleLogout = async () => {
+        const csrfToken = await fetchCsrfToken()
+        const response = await authRequest('/api/auth/logout', {
+            method: 'POST',
+            headers: { 'X-XSRF-TOKEN': csrfToken },
+        })
+        if (!response.ok) {
+            throw new Error('Không thể đăng xuất. Vui lòng thử lại.')
+        }
+        onLogout()
+    }
 
-function Header({ active, setSidebarOpen }) {
     return (
         <header className="topbar">
             <div className="topbar-left">
@@ -40,16 +53,16 @@ function Header({ active, setSidebarOpen }) {
                     <span />
                 </button>
 
-                <div className="profile">
-                    <div className="avatar">AD</div>
+                <button className="profile" type="button" onClick={handleLogout} title="Đăng xuất">
+                    <div className="avatar">{user.tenDangNhap.slice(0, 2).toUpperCase()}</div>
 
                     <div className="profile-info">
-                        <strong>Admin</strong>
-                        <span>Quản trị viên</span>
+                        <strong>{user.tenDangNhap}</strong>
+                        <span>{user.vaiTro}</span>
                     </div>
 
                     <ChevronDown size={16} />
-                </div>
+                </button>
             </div>
         </header>
     )

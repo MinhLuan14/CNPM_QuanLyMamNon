@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useRef, useState } from 'react';
 import './Login.css';
 // Dùng lucide-react hoặc react-icons cho các icon
 import { User, Lock, Eye, EyeOff, ShieldCheck, Heart, TrendingUp, LogIn } from 'lucide-react';
@@ -6,16 +6,43 @@ import logoImg from '../../assets/Logo.png';
 import heroImg from '../../assets/Hero.png';
 import childrenImg from '../../assets/iconchildren.png'
 import fishBlueImg from '../../assets/Fish.png';
-const Login = () => {
+import { authRequest, fetchCsrfToken, responseError } from '../../api/auth'
+const Login = ({ onLogin }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const submitInProgress = useRef(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log({ username, password, rememberMe });
-    // Xử lý gửi API đăng nhập tại đây (Fetch / Axios)
+    if (submitInProgress.current) return;
+
+    submitInProgress.current = true;
+    setError('');
+    setIsSubmitting(true);
+
+    try {
+      const csrfToken = await fetchCsrfToken();
+      const response = await authRequest('/api/auth/login', {
+        method: 'POST',
+        headers: { 'X-XSRF-TOKEN': csrfToken },
+        body: JSON.stringify({ tenDangNhap: username, matKhau: password, rememberMe }),
+      });
+
+      if (!response.ok) {
+        throw new Error(await responseError(response, 'Đăng nhập không thành công.'));
+      }
+
+      onLogin(await response.json());
+    } catch (requestError) {
+      setError(requestError.message || 'Không thể kết nối đến máy chủ.');
+    } finally {
+      submitInProgress.current = false;
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -70,8 +97,13 @@ const Login = () => {
           </div>
 
           <p className="sub-description">
-            BabyShark – Giải pháp quản lý mầm non thông minh,<br />
-            kết nối nhà trường và phụ huynh.
+            <span className="highlight">
+              BabyShark – Giải pháp quản lý mầm non thông minh
+            </span>
+            <br />
+            <span className="tagline">
+              Kết nối nhà trường và phụ huynh.
+            </span>
           </p>
         </div>
       </div>
@@ -102,9 +134,12 @@ const Login = () => {
               <User className="input-icon" size={20} />
               <input
                 type="text"
-                placeholder="Tên đăng nhập hoặc Email"
+                placeholder="Tên đăng nhập"
                 value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                onChange={(e) => {
+                  setUsername(e.target.value);
+                  setError('');
+                }}
                 required
               />
             </div>
@@ -116,7 +151,10 @@ const Login = () => {
                 type={showPassword ? 'text' : 'password'}
                 placeholder="Mật khẩu"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  setError('');
+                }}
                 required
               />
               <button
@@ -126,6 +164,10 @@ const Login = () => {
               >
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
+            </div>
+
+            <div className="login-error-slot" aria-live="polite">
+              {error && <p className="login-error" role="alert">{error}</p>}
             </div>
 
             {/* Ghi nhớ & Quên mật khẩu */}
@@ -143,14 +185,11 @@ const Login = () => {
             </div>
 
             {/* Nút Đăng nhập */}
-            <button type="submit" className="submit-btn">
-              <LogIn size={18} style={{ marginRight: '8px' }} /> Đăng nhập
+            <button type="submit" className="submit-btn" disabled={isSubmitting}>
+              <LogIn size={18} style={{ marginRight: '8px' }} />
+              {isSubmitting ? 'Đang đăng nhập...' : 'Đăng nhập'}
             </button>
           </form>
-
-          <div className="or-divider">
-            <span>Hoặc</span>
-          </div>
 
           {/* Thông báo bên dưới */}
           <div className="info-banner">

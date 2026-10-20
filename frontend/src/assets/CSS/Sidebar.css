@@ -1,0 +1,551 @@
+/* =========================================
+   BABYSHARK SIDEBAR - BLUE EDITION
+========================================= */
+
+.sidebar {
+    --primary: #087ee1;
+    --primary-dark: #075db5;
+    --primary-light: #e0f1ff;
+    --text-main: #263f60;
+    --text-muted: #7188a8;
+    --border-color: #dceafb;
+
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 100;
+
+    display: flex;
+    flex-direction: column;
+
+    width: 280px;
+    height: 100vh;
+    padding: 0 16px 14px;
+
+    background: linear-gradient(180deg,
+            #edf7ff 0%,
+            #f5faff 35%,
+            #ffffff 100%);
+
+    border-right: 1px solid #d7e9fb;
+
+    box-shadow:
+        5px 0 25px rgba(17, 94, 170, 0.09);
+
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+
+    transition:
+        transform 0.3s ease,
+        box-shadow 0.3s ease;
+}
+
+/* =========================================
+   BRAND HEADER
+========================================= */
+
+.brand {
+    position: relative;
+    isolation: isolate;
+
+    display: flex;
+    align-items: center;
+    gap: 11px;
+
+    min-height: 155px;
+    flex-shrink: 0;
+
+    padding: 22px 10px 24px;
+    margin: 0 -16px 5px;
+
+    background: linear-gradient(135deg,
+            #075bb9 0%,
+            #087ee1 48%,
+            #20b8ed 100%);
+
+    border-radius: 0 0 24px 24px;
+
+    box-shadow:
+        0 8px 22px rgba(8, 105, 194, 0.22);
+
+    overflow: hidden;
+}
+
+/* Họa tiết trang trí */
+
+.brand::before {
+    content: "";
+    position: absolute;
+    z-index: -1;
+
+    width: 190px;
+    height: 190px;
+
+    top: -105px;
+    right: -55px;
+
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    border-radius: 50%;
+
+    box-shadow:
+        0 0 0 17px rgba(255, 255, 255, 0.07),
+        0 0 0 35px rgba(255, 255, 255, 0.045);
+}
+
+.brand::after {
+    content: "";
+    position: absolute;
+    z-index: -1;
+
+    width: 105px;
+    height: 105px;
+
+    bottom: -72px;
+    left: 38%;
+
+    background: rgba(255, 255, 255, 0.09);
+    border-radius: 50%;
+}
+
+/* Logo */
+
+.brand-logo {
+    width: 112px;
+    height: 105px;
+
+    flex-shrink: 0;
+    object-fit: contain;
+
+    padding: 4px;
+
+    background: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.85);
+    border-radius: 19px;
+
+    box-shadow:
+        0 5px 15px rgba(0, 42, 105, 0.16);
+
+    transition:
+        transform 0.3s ease,
+        box-shadow 0.3s ease;
+}
+
+.brand-logo:hover {
+    transform: translateY(-3px) scale(1.03);
+
+    box-shadow:
+        0 8px 20px rgba(0, 42, 105, 0.22);
+}
+
+/* Tên thương hiệu */
+
+.brand>div {
+    position: relative;
+    z-index: 1;
+    min-width: 0;
+}
+
+.brand h2 {
+    margin: 0 0 8px;
+
+    color: #ffffff;
+
+    font-size: 23px;
+    font-weight: 800;
+    line-height: 1.2;
+    letter-spacing: -0.8px;
+
+    white-space: nowrap;
+
+    text-shadow:
+        0 2px 8px rgba(0, 43, 100, 0.18);
+}
+
+.brand span {
+    display: block;
+    max-width: 125px;
+
+    color: #e0f5ff;
+
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.8;
+    letter-spacing: 0.3px;
+}
+
+/* =========================================
+   MENU LABEL
+========================================= */
+
+.menu-label {
+    position: relative;
+
+    padding: 0 12px;
+    margin-bottom: 13px;
+
+    color: #54779f;
+
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+}
+
+.menu-label::before {
+    content: "";
+
+    display: inline-block;
+    width: 4px;
+    height: 12px;
+
+    margin-right: 9px;
+
+    vertical-align: -2px;
+
+    background: linear-gradient(180deg,
+            #087ee1,
+            #24b8ed);
+
+    border-radius: 5px;
+}
+
+/* =========================================
+   MENU LIST
+========================================= */
+
+.sidebar-menu {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+
+    flex: 1;
+    min-height: 0;
+
+    overflow-y: auto;
+    overflow-x: hidden;
+
+    padding: 0 0 12px;
+}
+
+/* Scrollbar */
+
+.sidebar-menu::-webkit-scrollbar {
+    width: 4px;
+}
+
+.sidebar-menu::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.sidebar-menu::-webkit-scrollbar-thumb {
+    background: #bddcf8;
+    border-radius: 10px;
+}
+
+.sidebar-menu::-webkit-scrollbar-thumb:hover {
+    background: #76b7f0;
+}
+
+/* =========================================
+   MENU ITEM
+========================================= */
+
+.menu-item {
+    position: relative;
+
+    display: flex;
+    align-items: center;
+    gap: 13px;
+
+    width: 100%;
+    min-height: 49px;
+
+    padding: 0 14px;
+
+    color: #526b8c;
+    background: rgba(255, 255, 255, 0.72);
+
+    border: 1px solid rgba(218, 234, 250, 0.75);
+    border-radius: 13px;
+
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 500;
+    text-align: left;
+
+    cursor: pointer;
+
+    transition:
+        background 0.22s ease,
+        color 0.22s ease,
+        border-color 0.22s ease,
+        transform 0.22s ease,
+        box-shadow 0.22s ease;
+}
+
+/* Icon */
+
+.menu-item svg {
+    flex-shrink: 0;
+
+    color: #6584aa;
+
+    transition:
+        color 0.22s ease,
+        transform 0.22s ease;
+}
+
+/* Nội dung */
+
+.menu-item span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Hover */
+
+.menu-item:hover {
+    color: #076bc5;
+
+    background: linear-gradient(100deg,
+            #e1f1ff,
+            #f0f8ff);
+
+    border-color: #c8e4ff;
+
+    box-shadow:
+        0 3px 10px rgba(14, 111, 203, 0.06);
+
+    transform: translateX(2px);
+}
+
+.menu-item:hover svg {
+    color: #087ee1;
+    transform: scale(1.08);
+}
+
+/* =========================================
+   ACTIVE ITEM
+========================================= */
+
+.menu-item.active {
+    color: #ffffff;
+
+    background: linear-gradient(110deg,
+            #0871ce 0%,
+            #108fe8 65%,
+            #22acec 100%);
+
+    border-color: transparent;
+
+    font-weight: 700;
+
+    box-shadow:
+        0 5px 13px rgba(8, 119, 211, 0.22),
+        inset 0 1px 0 rgba(255, 255, 255, 0.15);
+
+    transform: none;
+}
+
+.menu-item.active svg {
+    color: #ffffff;
+}
+
+.menu-item.active:hover {
+    background: linear-gradient(110deg,
+            #0665bd 0%,
+            #087ee1 65%,
+            #169ddd 100%);
+
+    box-shadow:
+        0 6px 16px rgba(8, 119, 211, 0.27);
+}
+
+/* Vạch chỉ báo mục đang chọn */
+
+.menu-item.active::before {
+    content: "";
+
+    position: absolute;
+
+    left: 5px;
+    top: 13px;
+    bottom: 13px;
+
+    width: 3px;
+
+    background: #b8f0ff;
+    border-radius: 5px;
+}
+
+/* Hiệu ứng nhấn */
+
+.menu-item:active {
+    transform: scale(0.985);
+}
+
+/* Focus bàn phím */
+
+.menu-item:focus-visible {
+    outline: 2px solid #1688e8;
+    outline-offset: 2px;
+}
+
+/* =========================================
+   SIDEBAR BOTTOM
+========================================= */
+
+.sidebar-bottom {
+    flex-shrink: 0;
+
+    padding-top: 13px;
+
+    border-top: 1px solid #dceafb;
+}
+
+.sidebar-version {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+
+    padding: 9px 0;
+
+    color: #7189a8;
+
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+}
+
+.sidebar-version::before {
+    content: "";
+
+    width: 7px;
+    height: 7px;
+
+    background: #20bd8b;
+    border-radius: 50%;
+
+    box-shadow:
+        0 0 0 3px #dff8ee;
+}
+
+/* =========================================
+   MOBILE OVERLAY
+========================================= */
+
+.mobile-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 99;
+
+    width: 100%;
+    height: 100%;
+
+    padding: 0;
+    border: none;
+
+    background: rgba(8, 37, 74, 0.48);
+    backdrop-filter: blur(4px);
+
+    cursor: pointer;
+}
+
+/* Nút đóng */
+
+.close-sidebar {
+    display: none;
+    align-items: center;
+    justify-content: center;
+
+    width: 34px;
+    height: 34px;
+
+    flex-shrink: 0;
+    margin-left: auto;
+
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.15);
+
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 10px;
+
+    cursor: pointer;
+
+    transition:
+        background 0.2s ease,
+        transform 0.2s ease;
+}
+
+.close-sidebar:hover {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.28);
+    transform: scale(1.05);
+}
+
+/* =========================================
+   RESPONSIVE
+========================================= */
+
+@media (max-width: 768px) {
+    .sidebar {
+        width: min(290px, 86vw);
+        padding: 0 16px 14px;
+
+        transform: translateX(-100%);
+        visibility: hidden;
+    }
+
+    .sidebar.sidebar-open {
+        transform: translateX(0);
+        visibility: visible;
+
+        box-shadow:
+            12px 0 40px rgba(8, 47, 91, 0.22);
+    }
+
+    .brand {
+        min-height: 125px;
+        gap: 9px;
+
+        padding: 17px 10px 20px;
+        margin: 0 -16px 22px;
+    }
+
+    .brand-logo {
+        width: 92px;
+        height: 88px;
+        border-radius: 16px;
+    }
+
+    .brand h2 {
+        font-size: 20px;
+    }
+
+    .brand span {
+        font-size: 11px;
+    }
+
+    .close-sidebar {
+        display: flex;
+    }
+
+    .menu-item {
+        min-height: 47px;
+    }
+}
+
+/* Tôn trọng cài đặt giảm chuyển động */
+
+@media (prefers-reduced-motion: reduce) {
+
+    .sidebar,
+    .brand-logo,
+    .menu-item,
+    .menu-item svg,
+    .close-sidebar {
+        transition: none;
+    }
+}
