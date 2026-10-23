@@ -37,7 +37,10 @@ public class TreEm {
     @Column(name = "noiSinh", nullable = false, length = 100)
     private String noiSinh;
 
+    @Column(name = "trangThaiHocTap", nullable = false, length = 30)
+    private String trangThaiHocTap = "Đang học";
+
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "maLopHoc", nullable = false)
+    @JoinColumn(name = "maLopHoc")
     private LopHoc lopHoc;
 }

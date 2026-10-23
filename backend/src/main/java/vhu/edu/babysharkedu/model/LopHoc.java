@@ -26,4 +26,10 @@ public class LopHoc {
 
     @Column(name = "phongHoc", nullable = false)
     private Integer phongHoc;
+
+    @Column(name = "SoLuongToiDa", nullable = false)
+    private Integer soLuongToiDa = 25;
+
+    @Column(name = "DoTuoi", nullable = false, length = 20)
+    private String doTuoi = "3-4 tuổi";
 }

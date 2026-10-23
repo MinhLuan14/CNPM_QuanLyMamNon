@@ -1,4 +1,4 @@
-.page-container {
+﻿.page-container {
   padding: 28px 32px;
   max-width: 1600px;
   margin: auto;
@@ -832,6 +832,526 @@
   font-size: 12px;
   color: #475569;
   flex-wrap: wrap;
+}
+
+.classes-management-page {
+  --classes-blue: #1677ff;
+  --classes-ink: #1d2939;
+  --classes-muted: #667085;
+  --classes-border: #e4eaf2;
+  --classes-green: #16a34a;
+  --classes-amber: #d97706;
+  --classes-red: #dc2626;
+  background: #f5f8fc;
+  color: var(--classes-ink);
+}
+
+.classes-management-page .page-badge {
+  color: var(--classes-blue);
+  background: #eaf3ff;
+  border-color: #d5e7ff;
+}
+
+.classes-management-page .page-header h2 {
+  color: var(--classes-ink);
+}
+
+.classes-management-page .page-header p {
+  color: var(--classes-muted);
+}
+
+.classes-management-page .page-header>.btn-primary {
+  background: var(--classes-blue);
+  box-shadow: 0 5px 14px rgba(22, 119, 255, 0.2);
+}
+
+.classes-management-page .page-header>.btn-primary:hover {
+  background: #0958d9;
+  box-shadow: 0 7px 18px rgba(22, 119, 255, 0.25);
+}
+
+.classes-grid {
+  display: grid;
+  width: 100%;
+  max-width: 1440px;
+  margin-inline: auto;
+
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+
+  align-items: stretch;
+  gap: 22px;
+}
+
+.classes-management-page {
+  padding-right: 28px;
+  padding-left: 28px;
+}
+
+.classes-management-page .class-card-modern {
+  width: 100%;
+  min-width: 0;
+  min-height: 400px;
+  height: 100%;
+  max-height: none;
+
+  padding: 18px;
+  gap: 0;
+  justify-content: flex-start;
+
+  border: 1px solid var(--classes-border);
+  border-radius: 18px;
+  box-shadow: 0 3px 12px rgba(29, 41, 57, 0.045);
+}
+
+.classes-management-page .class-card-modern:hover {
+  transform: translateY(-3px);
+  border-color: #c9ddf8;
+  box-shadow: 0 10px 24px rgba(29, 41, 57, 0.09);
+}
+
+.class-card-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+  min-height: 96px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #eef2f6;
+}
+
+.class-card-identity {
+  min-width: 0;
+  flex: 1;
+}
+
+.classes-management-page .class-badge-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-bottom: 8px;
+}
+
+.class-grade-badge,
+.class-age-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  max-width: 100%;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  line-height: 1.3;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.class-grade-badge {
+  color: #0958d9;
+  background: #eaf3ff;
+}
+
+.class-age-badge {
+  color: #9a6700;
+  background: #fff6df;
+}
+
+.classes-management-page .room-badge {
+  flex: 0 0 auto;
+  max-width: 44%;
+  padding: 7px 9px;
+  border: 1px solid #e6ebf2;
+  border-radius: 10px;
+  color: #475467;
+  background: #f8fafc;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.classes-management-page .room-badge svg {
+  flex: 0 0 auto;
+  color: var(--classes-blue);
+}
+
+.classes-management-page .class-title {
+  display: -webkit-box;
+  margin: 0 0 5px;
+  overflow: hidden;
+  color: var(--classes-ink);
+  font-size: 21px;
+  font-weight: 700;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.classes-management-page .class-school-year {
+  color: var(--classes-muted);
+  font-size: 12px;
+}
+
+.classes-management-page .class-card-body-modern {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  margin: 0;
+  padding: 14px 0;
+  border: 0;
+}
+
+.class-capacity-panel {
+  padding: 12px;
+  border: 1px solid #e6edf5;
+  border-radius: 14px;
+  background: #fbfdff;
+}
+
+.class-capacity-overview {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 13px;
+}
+
+.class-section-label {
+  color: var(--classes-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.class-capacity-value {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 3px 0 0;
+}
+
+.class-capacity-value strong {
+  color: var(--classes-blue);
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.class-capacity-value span {
+  color: #475467;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.capacity-status {
+  flex: 0 0 auto;
+  max-width: 48%;
+  padding: 5px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.35;
+  text-align: center;
+}
+
+.capacity-status.capacity-available {
+  color: #15803d;
+  background: #ecfdf3;
+}
+
+.capacity-status.capacity-near-full {
+  color: #b45309;
+  background: #fff7e6;
+}
+
+.capacity-status.capacity-full {
+  color: #b42318;
+  background: #fef3f2;
+}
+
+.capacity-status.capacity-unknown {
+  color: #475467;
+  background: #f2f4f7;
+}
+
+.classes-management-page .class-progress-track {
+  height: 9px;
+  background: #e9eef5;
+}
+
+.classes-management-page .class-progress-fill {
+  background: var(--classes-green);
+  transition: width 0.3s ease;
+}
+
+.class-card-modern.capacity-near-full .class-progress-fill {
+  background: var(--classes-amber);
+}
+
+.class-card-modern.capacity-full .class-progress-fill {
+  background: var(--classes-red);
+}
+
+.class-card-modern.capacity-unknown .class-progress-fill {
+  background: #98a2b3;
+}
+
+.class-capacity-caption {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 8px;
+  color: var(--classes-muted);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.class-capacity-caption span:last-child {
+  font-weight: 600;
+  text-align: right;
+}
+
+.class-card-modern.capacity-near-full .class-capacity-caption span:last-child {
+  color: #b45309;
+}
+
+.class-card-modern.capacity-full .class-capacity-caption span:last-child {
+  color: #b42318;
+}
+
+.class-quick-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.class-quick-stat {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  min-height: 64px;
+  padding: 9px;
+  border: 1px solid transparent;
+  border-radius: 13px;
+}
+
+.class-quick-stat-current {
+  border-color: #d9f2e4;
+  background: #f1fbf5;
+}
+
+.class-quick-stat-capacity {
+  border-color: #e1eaff;
+  background: #f2f6ff;
+}
+
+.class-stat-icon {
+  display: grid;
+  flex: 0 0 38px;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: 11px;
+}
+
+.class-quick-stat-current .class-stat-icon {
+  color: var(--classes-green);
+  background: #dcfce7;
+}
+
+.class-quick-stat-capacity .class-stat-icon {
+  color: var(--classes-blue);
+  background: #e1eaff;
+}
+
+.class-quick-stat>div {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 2px;
+}
+
+.class-quick-stat strong {
+  color: var(--classes-ink);
+  font-size: 20px;
+  line-height: 1.2;
+}
+
+.class-quick-stat>div>span {
+  color: var(--classes-muted);
+  font-size: 11px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.classes-management-page .class-card-footer {
+  flex: 0 0 auto;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 12px;
+  border-top-color: #eef2f6;
+}
+
+.classes-management-page .btn-class-action {
+  min-width: 0;
+  min-height: 48px;
+  padding: 9px 12px;
+  border: 1px solid var(--classes-blue);
+  border-radius: 12px;
+  color: #fff;
+  background: var(--classes-blue);
+  font-size: 13px;
+  gap: 9px;
+}
+
+.classes-management-page .btn-class-action:hover {
+  border-color: #0958d9;
+  color: #fff;
+  background: #0958d9;
+}
+
+.class-action-chevron {
+  margin-left: auto;
+  opacity: 0.85;
+}
+
+.classes-management-page .btn-tbl.class-icon-action {
+  flex: 0 0 52px;
+  width: 52px;
+  height: 48px;
+  border: 1px solid #d0d5dd;
+  border-radius: 12px;
+  color: #475467;
+  background: #fff;
+}
+
+.classes-management-page .btn-tbl.class-edit-action:hover {
+  border-color: #b2d4ff;
+  color: var(--classes-blue);
+  background: #f2f7ff;
+}
+
+.classes-management-page .btn-tbl.class-delete-action {
+  border-color: #fecdca;
+  color: var(--classes-red);
+  background: #fff7f6;
+}
+
+.classes-management-page .btn-tbl.class-delete-action:hover {
+  border-color: #fda29b;
+  color: #b42318;
+  background: #fef3f2;
+}
+
+.classes-management-page button:focus-visible {
+  outline: 3px solid rgba(22, 119, 255, 0.35);
+  outline-offset: 2px;
+}
+
+.classes-management-page .btn-tbl:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
+/* Laptop nhỏ và tablet ngang */
+@media (max-width: 1100px) {
+  .classes-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Điện thoại và tablet dọc */
+@media (max-width: 700px) {
+  .classes-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+}
+
+@media (max-width: 520px) {
+  .classes-management-page {
+    padding: 20px 14px;
+  }
+
+  .classes-management-page .page-header {
+    gap: 14px;
+  }
+
+  .classes-management-page .page-header>.btn-primary {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .classes-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+
+  .classes-management-page .class-card-modern {
+    height: auto;
+    max-height: none;
+    min-height: 0;
+    padding: 18px;
+  }
+
+  .class-card-heading {
+    gap: 8px;
+  }
+
+  .classes-management-page .room-badge {
+    max-width: 40%;
+    padding: 6px 7px;
+    font-size: 11px;
+  }
+
+  .classes-management-page .class-title {
+    font-size: 20px;
+  }
+
+  .class-quick-stats {
+    gap: 8px;
+  }
+
+  .class-quick-stat {
+    gap: 8px;
+    padding: 9px;
+  }
+
+  .class-stat-icon {
+    flex-basis: 34px;
+    width: 34px;
+    height: 34px;
+  }
+
+  .classes-management-page .class-card-footer {
+    gap: 8px;
+  }
+
+  .classes-management-page .btn-class-action {
+    padding: 9px;
+    font-size: 12px;
+    gap: 6px;
+  }
+
+  .classes-management-page .btn-tbl.class-icon-action {
+    flex-basis: 48px;
+    width: 48px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  .classes-management-page .class-card-modern,
+  .classes-management-page .class-progress-fill,
+  .classes-management-page .btn-class-action {
+    transition: none;
+  }
+
+  .classes-management-page .class-card-modern:hover {
+    transform: none;
+  }
 }
 
 /* --- NUTRITION & MEAL STYLES --- */
@@ -1681,6 +2201,11 @@
   gap: 3px;
 }
 
+.custom-table select:focus-visible {
+  outline: 3px solid rgba(22, 119, 255, 0.25);
+  border-color: #1677ff;
+}
+
 @media (max-width: 900px) {
   .meals-grid {
     grid-template-columns: 1fr;
@@ -1697,5 +2222,42 @@
 @media (max-width: 768px) {
   .admin-page-content {
     padding: 86px 14px 20px;
+  }
+}
+
+.classes-management-page .classes-grid {
+  display: grid;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 22px;
+  align-items: stretch;
+}
+
+.classes-management-page .class-card-modern {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 400px;
+  height: 100%;
+  max-height: none;
+}
+
+@media (max-width: 1100px) {
+  .classes-management-page .classes-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .classes-management-page .classes-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+
+  .classes-management-page .class-card-modern {
+    min-height: 0;
+    height: auto;
   }
 }

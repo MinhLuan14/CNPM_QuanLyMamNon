@@ -1,355 +1,621 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   School,
   Plus,
   Users,
   Baby,
-  GraduationCap,
   CheckCircle2,
   Trash2,
   Eye,
-  MapPin
+  MapPin,
+  Edit,
+  ChevronRight,
 } from 'lucide-react';
-import { initialClasses, initialChildren, initialTeachers } from '../../data/mockData';
+import { authRequest, fetchCsrfToken, responseError } from '../../api/auth';
 import Modal from '../../components/Modal';
 
+const AGE_GROUPS = ['18 - 36 tháng', '3 - 4 tuổi', '4 - 5 tuổi', '5 - 6 tuổi'];
+
+const AGE_GROUP_DETAILS = {
+  '18 - 36 tháng': { grade: 'Nhà trẻ', color: '#ff7875' },
+  '3 - 4 tuổi': { grade: 'Mầm', color: '#ffc069' },
+  '4 - 5 tuổi': { grade: 'Chồi', color: '#5cdbd3' },
+  '5 - 6 tuổi': { grade: 'Lá', color: '#85a5ff' },
+};
+
+const EMPTY_FORM = {
+  tenLopHoc: '',
+  phongHoc: '',
+  soLuongToiDa: 25,
+  doTuoi: '3 - 4 tuổi',
+};
+
+async function readResponse(response, fallback) {
+  if (!response.ok) {
+    throw new Error(await responseError(response, fallback));
+  }
+  return response.status === 204 ? null : response.json();
+}
+
+function getGrade(ageGroup) {
+  return AGE_GROUP_DETAILS[ageGroup]?.grade || 'Khác';
+}
+
+function formatDate(date) {
+  if (!date) return 'Chưa có thông tin';
+  const parsedDate = new Date(`${date}T00:00:00`);
+  return Number.isNaN(parsedDate.getTime())
+    ? date
+    : parsedDate.toLocaleDateString('vi-VN');
+}
+
 export default function ClassesManagement({ onShowToast }) {
-  const [classes, setClasses] = useState(initialClasses);
+  const [classes, setClasses] = useState([]);
   const [selectedGrade, setSelectedGrade] = useState('ALL');
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [isClassDetailOpen, setIsClassDetailOpen] = useState(false);
   const [selectedClassData, setSelectedClassData] = useState(null);
+  const [childrenInClass, setChildrenInClass] = useState([]);
+  const [formData, setFormData] = useState(EMPTY_FORM);
+  const [editingClassId, setEditingClassId] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [busyClassId, setBusyClassId] = useState(null);
+  const [loadError, setLoadError] = useState('');
+  const [failedRequest, setFailedRequest] = useState(null);
+  const [capacityError, setCapacityError] = useState('');
+  const requestApi = useCallback(async (path, options) => {
+    const method = options?.method || 'GET';
+    const response = await authRequest(path, options);
+    if (!response.ok) {
+      setFailedRequest({
+        method,
+        path,
+        status: response.status,
+        statusText: response.statusText,
+      });
+    } else {
+      setFailedRequest(null);
+    }
+    return response;
+  }, []);
 
-  // Form state
-  const [newClass, setNewClass] = useState({
-    name: '',
-    grade: 'Mầm',
-    ageGroup: '3 - 4 tuổi',
-    room: 'P.203',
-    capacity: 25,
-    mainTeacher: 'Phạm Quỳnh Nga',
-    assistantTeacher: 'Đỗ Thảo Vy',
-    schoolYear: '2025-2026',
-    color: '#ffc069'
-  });
+  const loadClasses = useCallback(async () => {
+    try {
+      const response = await requestApi('/api/lop-hoc');
+      const classList = await readResponse(response, 'Không thể tải danh sách lớp học.');
+      const classesWithChildren = await Promise.all(
+        classList.map(async (classItem) => {
+          const childrenResponse = await requestApi(`/api/lop-hoc/${classItem.maLopHoc}/tre-em`);
+          const children = await readResponse(childrenResponse, 'Không thể tải sĩ số lớp học.');
+          return { ...classItem, current: children.length };
+        }),
+      );
+      setLoadError('');
+      setClasses(classesWithChildren);
+    } catch (error) {
+      setLoadError(error.message || 'Không thể tải danh sách lớp học.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [requestApi]);
 
-  const filteredClasses = classes.filter((cls) => {
-    return selectedGrade === 'ALL' || cls.grade === selectedGrade;
-  });
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => loadClasses(), 0);
+    return () => window.clearTimeout(timeoutId);
+  }, [loadClasses]);
 
-  const handleAddSubmit = (e) => {
-    e.preventDefault();
-    if (!newClass.name) {
-      alert('Vui lòng nhập tên lớp!');
+  const filteredClasses = classes.filter((classItem) => (
+    selectedGrade === 'ALL' || getGrade(classItem.doTuoi) === selectedGrade
+  ));
+
+  const showToast = (type, title, message) => {
+    onShowToast?.({ type, title, message });
+  };
+
+  const handleReloadClasses = () => {
+    setIsLoading(true);
+    setLoadError('');
+    loadClasses();
+  };
+
+  const openAddModal = () => {
+    setEditingClassId(null);
+    setFormData(EMPTY_FORM);
+    setIsFormModalOpen(true);
+  };
+
+  const openEditModal = (classItem) => {
+    setEditingClassId(classItem.maLopHoc);
+    setFormData({
+      tenLopHoc: classItem.tenLopHoc,
+      phongHoc: String(classItem.phongHoc),
+      soLuongToiDa: classItem.soLuongToiDa,
+      doTuoi: classItem.doTuoi,
+    });
+    setIsFormModalOpen(true);
+  };
+
+  const handleSaveSubmit = async (event) => {
+    event.preventDefault();
+    const roomNumber = Number(formData.phongHoc);
+    const capacity = Number(formData.soLuongToiDa);
+    if (!formData.tenLopHoc.trim() || !Number.isInteger(roomNumber) || roomNumber <= 0
+      || !Number.isInteger(capacity) || capacity < 1 || capacity > 50
+      || !formData.doTuoi.trim()) {
+
+      if (!Number.isInteger(capacity) || capacity < 1 || capacity > 50) {
+        setCapacityError(
+          !Number.isInteger(capacity) || formData.soLuongToiDa === ''
+            ? 'Vui lòng nhập sĩ số là số nguyên từ 1 đến 50.'
+            : capacity > 50
+              ? 'Sĩ số tối đa không được vượt quá 50 trẻ.'
+              : 'Sĩ số tối thiểu là 1 trẻ.'
+        );
+        document.getElementById('class-capacity')?.focus();
+        return;
+      }
+
+      showToast(
+        'error',
+        'Dữ liệu chưa hợp lệ',
+        'Vui lòng nhập tên lớp, phòng học và sĩ số tối đa hợp lệ.'
+      );
       return;
     }
 
-    const newId = `LOP0${classes.length + 1}`;
-    const classToAdd = {
-      ...newClass,
-      id: newId,
-      current: 0
-    };
+    setCapacityError('');
 
-    setClasses([...classes, classToAdd]);
-    setIsAddModalOpen(false);
-    if (onShowToast) {
-      onShowToast({
-        type: 'success',
-        title: 'Thành công',
-        message: `Đã mở thêm lớp học: ${newClass.name}!`
-      });
+    setIsSaving(true);
+    try {
+      const csrfToken = await fetchCsrfToken();
+      const response = await requestApi(
+        editingClassId ? `/api/lop-hoc/${editingClassId}` : '/api/lop-hoc',
+        {
+          method: editingClassId ? 'PUT' : 'POST',
+          headers: { 'X-XSRF-TOKEN': csrfToken },
+          body: JSON.stringify({
+            tenLopHoc: formData.tenLopHoc.trim(),
+            phongHoc: roomNumber,
+            soLuongToiDa: capacity,
+            doTuoi: formData.doTuoi.trim(),
+          }),
+        },
+      );
+      const savedClass = await readResponse(
+        response,
+        editingClassId ? 'Không thể cập nhật lớp học.' : 'Không thể thêm lớp học.',
+      );
+      setIsFormModalOpen(false);
+      await loadClasses();
+      showToast(
+        'success',
+        'Thành công',
+        editingClassId
+          ? `Đã cập nhật lớp ${savedClass.tenLopHoc}.`
+          : `Đã thêm lớp ${savedClass.tenLopHoc}.`,
+      );
+    } catch (error) {
+      showToast('error', 'Không thể lưu lớp học', error.message || 'Vui lòng thử lại.');
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  const handleOpenClassDetail = (cls) => {
-    setSelectedClassData(cls);
+  const handleOpenClassDetail = async (classItem) => {
+    setSelectedClassData(classItem);
+    setChildrenInClass([]);
     setIsClassDetailOpen(true);
+    try {
+      const [classResponse, childrenResponse] = await Promise.all([
+        requestApi(`/api/lop-hoc/${classItem.maLopHoc}`),
+        requestApi(`/api/lop-hoc/${classItem.maLopHoc}/tre-em`),
+      ]);
+      const [details, children] = await Promise.all([
+        readResponse(classResponse, 'Không thể tải thông tin lớp học.'),
+        readResponse(childrenResponse, 'Không thể tải danh sách trẻ.'),
+      ]);
+      setSelectedClassData({ ...details, current: children.length });
+      setChildrenInClass(children);
+      setClasses((currentClasses) => currentClasses.map((item) => (
+        item.maLopHoc === details.maLopHoc ? { ...item, current: children.length } : item
+      )));
+    } catch (error) {
+      showToast('error', 'Không thể tải thông tin lớp', error.message || 'Vui lòng thử lại.');
+    }
   };
 
-  const childrenInClass = selectedClassData
-    ? initialChildren.filter((c) => c.classId === selectedClassData.id)
-    : [];
+  const handleDeleteClass = async (classItem) => {
+    if (!window.confirm(`Bạn có chắc muốn xóa lớp ${classItem.tenLopHoc}?`)) return;
+
+    setBusyClassId(classItem.maLopHoc);
+    try {
+      const csrfToken = await fetchCsrfToken();
+      const response = await requestApi(`/api/lop-hoc/${classItem.maLopHoc}`, {
+        method: 'DELETE',
+        headers: { 'X-XSRF-TOKEN': csrfToken },
+      });
+      await readResponse(response, 'Không thể xóa lớp học.');
+      setClasses((currentClasses) => currentClasses.filter(
+        (item) => item.maLopHoc !== classItem.maLopHoc,
+      ));
+      showToast('success', 'Đã xóa', `Đã xóa lớp ${classItem.tenLopHoc}.`);
+    } catch (error) {
+      showToast('error', 'Không thể xóa lớp', error.message || 'Vui lòng thử lại.');
+    } finally {
+      setBusyClassId(null);
+    }
+  };
 
   return (
-    <div className="page-container fade-in">
+    <div className="page-container classes-management-page fade-in">
       <div className="page-header">
         <div>
           <div className="page-badge">
             <School size={14} /> QUẢN LÝ LỚP HỌC & SĨ SỐ
           </div>
           <h2>Hệ Thống Lớp Học Mầm Non</h2>
-          <p>Phân chia các khối lớp theo lứa tuổi: Nhà trẻ, Mầm, Chồi, Lá và phân công ban giáo viên phụ trách</p>
+          <p>Quản lý lớp học, độ tuổi, phòng học và sĩ số trực tiếp từ hệ thống.</p>
         </div>
-
-        <button className="btn-primary" onClick={() => setIsAddModalOpen(true)}>
+        <button className="btn-primary" onClick={openAddModal}>
           <Plus size={18} /> Mở thêm lớp học
         </button>
       </div>
 
-      {/* Tabs Phân Khối Lớp */}
+      {failedRequest && (
+        <div className="empty-state-hint" role="alert">
+          API thất bại: <strong>{failedRequest.method} {failedRequest.path}</strong>
+          {' — '}
+          <strong>{failedRequest.status} {failedRequest.statusText}</strong>
+        </div>
+      )}
+
       <div className="grade-tabs">
-        <button
-          className={`grade-tab-btn ${selectedGrade === 'ALL' ? 'active' : ''}`}
-          onClick={() => setSelectedGrade('ALL')}
-        >
-          Tất cả các khối ({classes.length} lớp)
-        </button>
-        <button
-          className={`grade-tab-btn ${selectedGrade === 'Nhà trẻ' ? 'active' : ''}`}
-          onClick={() => setSelectedGrade('Nhà trẻ')}
-        >
-          Khối Nhà trẻ (18 - 36 tháng)
-        </button>
-        <button
-          className={`grade-tab-btn ${selectedGrade === 'Mầm' ? 'active' : ''}`}
-          onClick={() => setSelectedGrade('Mầm')}
-        >
-          Khối Mầm (3 - 4 tuổi)
-        </button>
-        <button
-          className={`grade-tab-btn ${selectedGrade === 'Chồi' ? 'active' : ''}`}
-          onClick={() => setSelectedGrade('Chồi')}
-        >
-          Khối Chồi (4 - 5 tuổi)
-        </button>
-        <button
-          className={`grade-tab-btn ${selectedGrade === 'Lá' ? 'active' : ''}`}
-          onClick={() => setSelectedGrade('Lá')}
-        >
-          Khối Lá (5 - 6 tuổi)
-        </button>
+        {[
+          ['ALL', `Tất cả các khối (${classes.length} lớp)`],
+          ['Nhà trẻ', 'Khối Nhà trẻ'],
+          ['Mầm', 'Khối Mầm'],
+          ['Chồi', 'Khối Chồi'],
+          ['Lá', 'Khối Lá'],
+        ].map(([grade, label]) => (
+          <button
+            key={grade}
+            className={`grade-tab-btn ${selectedGrade === grade ? 'active' : ''}`}
+            onClick={() => setSelectedGrade(grade)}
+          >
+            {label}{grade !== 'ALL' ? ` (${classes.filter((item) => getGrade(item.doTuoi) === grade).length})` : ''}
+          </button>
+        ))}
       </div>
 
-      {/* Lưới Thẻ Lớp Học */}
-      <div className="cards-grid">
-        {filteredClasses.map((cls) => {
-          const fillPercentage = Math.round((cls.current / cls.capacity) * 100);
-          return (
-            <div key={cls.id} className="class-card card-lift">
-              <div className="class-card-header" style={{ borderTop: `4px solid ${cls.color || '#1890ff'}` }}>
-                <div className="class-badge-group">
-                  <span className="badge-tag bg-light-blue">{cls.grade}</span>
-                  <span className="badge-tag">{cls.ageGroup}</span>
-                </div>
-                <span className="room-badge"><MapPin size={12} /> {cls.room}</span>
-              </div>
+      {loadError && (
+        <div className="empty-state-hint" role="alert">
+          <p>{loadError}</p>
+          <button className="btn-secondary" onClick={handleReloadClasses}>Thử tải lại</button>
+        </div>
+      )}
 
-              <div className="class-card-body">
-                <h3 className="class-title">{cls.name}</h3>
-                <span className="class-school-year">Năm học: {cls.schoolYear} • Mã: {cls.id}</span>
+      {isLoading ? (
+        <div className="empty-state-hint" role="status">Đang tải danh sách lớp học...</div>
+      ) : !loadError && filteredClasses.length === 0 ? (
+        <div className="empty-state-hint">
+          <School size={28} />
+          <p>{classes.length === 0 ? 'Chưa có lớp học nào trong hệ thống.' : 'Không có lớp học thuộc khối này.'}</p>
+        </div>
+      ) : (
+        <div className="classes-grid">
+          {filteredClasses.map((classItem) => {
+            const currentCount = Number.isFinite(classItem.current)
+              ? Math.max(0, classItem.current)
+              : 0;
+            const capacity = Number.isFinite(classItem.soLuongToiDa)
+              ? Math.max(0, classItem.soLuongToiDa)
+              : 0;
+            const fillPercentage = capacity > 0
+              ? Math.min(100, Math.round((currentCount / capacity) * 100))
+              : 0;
+            const remainingSeats = Math.max(0, capacity - currentCount);
+            const capacityStatus = capacity === 0
+              ? 'capacity-unknown'
+              : currentCount >= capacity
+                ? 'capacity-full'
+                : fillPercentage >= 80
+                  ? 'capacity-near-full'
+                  : 'capacity-available';
+            const capacityLabel = capacity === 0
+              ? 'Chưa thiết lập sức chứa'
+              : currentCount >= capacity
+                ? 'Lớp đã đầy'
+                : fillPercentage >= 80
+                  ? `Còn ${remainingSeats} chỗ`
+                  : `Còn ${remainingSeats} chỗ trống`;
 
-                {/* Thanh tiến độ sĩ số */}
-                <div className="capacity-bar-wrap">
-                  <div className="capacity-text">
-                    <span>Sĩ số hiện tại:</span>
-                    <strong>{cls.current} / {cls.capacity} học sinh</strong>
+            return (
+              <article key={classItem.maLopHoc} className={`class-card class-card-modern card-lift ${capacityStatus}`}>
+                <header className="class-card-heading">
+                  <div className="class-card-identity">
+                    <div className="class-badge-group">
+                      <span className="class-grade-badge">{getGrade(classItem.doTuoi)}</span>
+                      <span className="class-age-badge">{classItem.doTuoi || 'Chưa có độ tuổi'}</span>
+                    </div>
+                    <h3 className="class-title" title={classItem.tenLopHoc}>
+                      {classItem.tenLopHoc}
+                    </h3>
+                    <span className="class-school-year">Mã lớp: {classItem.maLopHoc}</span>
                   </div>
-                  <div className="progress-track">
+                  <span className="room-badge" title={`Phòng ${classItem.phongHoc}`}>
+                    <MapPin size={15} aria-hidden="true" />
+                    <span>Phòng {classItem.phongHoc}</span>
+                  </span>
+                </header>
+
+                <div className="class-card-body class-card-body-modern">
+                  <section className="class-capacity-panel" aria-label="Tình hình sĩ số">
+                    <div className="class-capacity-overview">
+                      <div>
+                        <span className="class-section-label">Sĩ số hiện tại</span>
+                        <p className="class-capacity-value">
+                          <strong>{currentCount}</strong>
+                          <span>/ {capacity || '—'} trẻ</span>
+                        </p>
+                      </div>
+                      <span className={`capacity-status ${capacityStatus}`}>
+                        {capacity === 0
+                          ? 'Chưa có sức chứa'
+                          : currentCount >= capacity
+                            ? 'Đã đầy'
+                            : 'Đang nhận trẻ'}
+                      </span>
+                    </div>
                     <div
-                      className="progress-fill"
-                      style={{
-                        width: `${fillPercentage}%`,
-                        backgroundColor: cls.color || '#1890ff'
-                      }}
-                    />
+                      className="progress-track class-progress-track"
+                      role="progressbar"
+                      aria-label="Tỷ lệ sử dụng sức chứa"
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                      aria-valuenow={fillPercentage}
+                    >
+                      <div
+                        className="progress-fill class-progress-fill"
+                        style={{ width: `${fillPercentage}%` }}
+                      />
+                    </div>
+                    <div className="class-capacity-caption">
+                      <span>{capacity > 0 ? `${fillPercentage}% sức chứa` : 'Chưa có dữ liệu sức chứa'}</span>
+                      <span>{capacityLabel}</span>
+                    </div>
+                  </section>
+
+                  <div className="class-quick-stats">
+                    <div className="class-quick-stat class-quick-stat-current">
+                      <span className="class-stat-icon" aria-hidden="true"><Baby size={19} /></span>
+                      <div>
+                        <strong>{currentCount}</strong>
+                        <span>Trẻ đang theo học</span>
+                      </div>
+                    </div>
+                    <div className="class-quick-stat class-quick-stat-capacity">
+                      <span className="class-stat-icon" aria-hidden="true"><Users size={19} /></span>
+                      <div>
+                        <strong>{capacity || '—'}</strong>
+                        <span>Sức chứa tối đa</span>
+                      </div>
+                    </div>
                   </div>
-                  <span className="capacity-percent">Đạt {fillPercentage}% công suất phòng học</span>
                 </div>
 
-                {/* Giáo viên phụ trách */}
-                <div className="teachers-assigned-box">
-                  <div className="t-row">
-                    <GraduationCap size={15} className="text-blue" />
-                    <span>GV Chủ nhiệm: <strong>{cls.mainTeacher}</strong></span>
-                  </div>
-                  <div className="t-row">
-                    <Users size={15} className="text-orange" />
-                    <span>GV Phụ tá: <strong>{cls.assistantTeacher}</strong></span>
-                  </div>
+                <div className="class-card-footer">
+                  <button
+                    className="btn-class-action"
+                    onClick={() => handleOpenClassDetail(classItem)}
+                    aria-label={`Xem danh sách ${currentCount} trẻ của lớp ${classItem.tenLopHoc}`}
+                  >
+                    <Eye size={18} aria-hidden="true" />
+                    <span>Xem danh sách trẻ</span>
+                    <ChevronRight size={18} className="class-action-chevron" aria-hidden="true" />
+                  </button>
+                  <button
+                    className="btn-tbl class-icon-action class-edit-action"
+                    title="Sửa lớp"
+                    aria-label={`Sửa lớp ${classItem.tenLopHoc}`}
+                    onClick={() => openEditModal(classItem)}
+                  >
+                    <Edit size={18} aria-hidden="true" />
+                  </button>
+                  <button
+                    className="btn-tbl delete class-icon-action class-delete-action"
+                    title="Xóa lớp"
+                    aria-label={`Xóa lớp ${classItem.tenLopHoc}`}
+                    disabled={busyClassId === classItem.maLopHoc}
+                    onClick={() => handleDeleteClass(classItem)}
+                  >
+                    <Trash2 size={18} aria-hidden="true" />
+                  </button>
                 </div>
-              </div>
+              </article>
+            );
+          })}
+        </div>
+      )}
 
-              <div className="class-card-footer">
-                <button
-                  className="btn-class-action"
-                  onClick={() => handleOpenClassDetail(cls)}
-                >
-                  <Eye size={15} /> Xem học sinh ({cls.current})
-                </button>
-                <button
-                  className="btn-tbl delete"
-                  title="Xóa lớp"
-                  onClick={() => {
-                    if (window.confirm(`Bạn có chắc muốn xóa lớp ${cls.name}?`)) {
-                      setClasses(classes.filter((c) => c.id !== cls.id));
-                    }
-                  }}
-                >
-                  <Trash2 size={15} />
-                </button>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Modal Thêm Lớp Mới */}
       <Modal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        title="Mở Thêm Lớp Học Mầm Non Mới"
+        isOpen={isFormModalOpen}
+        onClose={() => setIsFormModalOpen(false)}
+        title={editingClassId ? 'Cập Nhật Lớp Học' : 'Mở Thêm Lớp Học Mầm Non Mới'}
         maxWidth="600px"
         footer={
           <div className="modal-buttons">
-            <button className="btn-secondary" onClick={() => setIsAddModalOpen(false)}>
+            <button className="btn-secondary" onClick={() => setIsFormModalOpen(false)} disabled={isSaving}>
               Hủy
             </button>
-            <button className="btn-primary" onClick={handleAddSubmit}>
-              <CheckCircle2 size={16} /> Lưu lớp học
+            <button className="btn-primary" onClick={handleSaveSubmit} disabled={isSaving}>
+              <CheckCircle2 size={16} /> {isSaving ? 'Đang lưu...' : 'Lưu lớp học'}
             </button>
           </div>
         }
       >
-        <form onSubmit={handleAddSubmit} className="modal-form-grid">
+        <form onSubmit={handleSaveSubmit} className="modal-form-grid">
           <div className="form-group col-2">
-            <label>Tên lớp học *</label>
+            <label htmlFor="class-name">Tên lớp học *</label>
             <input
+              id="class-name"
               type="text"
+              maxLength={50}
               placeholder="VD: Mầm 3 (Ánh Dương)"
-              value={newClass.name}
-              onChange={(e) => setNewClass({ ...newClass, name: e.target.value })}
+              value={formData.tenLopHoc}
+              onChange={(event) => setFormData({ ...formData, tenLopHoc: event.target.value })}
+              required
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="class-age">Độ tuổi *</label>
+            <select
+              id="class-age"
+              value={formData.doTuoi}
+              onChange={(event) => setFormData({ ...formData, doTuoi: event.target.value })}
+            >
+              {AGE_GROUPS.map((ageGroup) => <option key={ageGroup} value={ageGroup}>{ageGroup}</option>)}
+            </select>
+          </div>
+          <div className="form-group">
+            <label htmlFor="class-room">Phòng học (số phòng) *</label>
+            <input
+              id="class-room"
+              type="number"
+              min="1"
+              step="1"
+              value={formData.phongHoc}
+              onChange={(event) => setFormData({ ...formData, phongHoc: event.target.value })}
               required
             />
           </div>
 
           <div className="form-group">
-            <label>Khối lớp</label>
-            <select
-              value={newClass.grade}
-              onChange={(e) => {
-                const grade = e.target.value;
-                let age = '3 - 4 tuổi';
-                if (grade === 'Nhà trẻ') age = '18 - 36 tháng';
-                if (grade === 'Chồi') age = '4 - 5 tuổi';
-                if (grade === 'Lá') age = '5 - 6 tuổi';
-                setNewClass({ ...newClass, grade, ageGroup: age });
+            <label htmlFor="class-capacity">
+              Sĩ số tối đa <span>*</span>
+            </label>
+
+            <input
+              id="class-capacity"
+              type="number"
+              min="1"
+              max="50"
+              step="1"
+              value={formData.soLuongToiDa}
+              onChange={(event) => {
+                const value = event.target.value;
+
+                setFormData((prev) => ({
+                  ...prev,
+                  soLuongToiDa: value,
+                }));
+
+                const number = Number(value);
+                let error = '';
+
+                if (value === '') {
+                  error = 'Vui lòng nhập sĩ số tối đa.';
+                } else if (!Number.isInteger(number)) {
+                  error = 'Sĩ số phải là số nguyên.';
+                } else if (number < 1) {
+                  error = 'Sĩ số tối thiểu là 1 trẻ.';
+                } else if (number > 50) {
+                  error = 'Sĩ số tối đa không được vượt quá 50 trẻ.';
+                }
+
+                setCapacityError(error);
+              }}
+              onKeyDown={(event) => {
+                if (['e', 'E', '+', '-', '.'].includes(event.key)) {
+                  event.preventDefault();
+                }
+              }}
+              style={{
+                border: capacityError
+                  ? '1px solid #ff4d4f'
+                  : '1px solid #d9d9d9',
+                outline: 'none',
+                boxShadow: capacityError
+                  ? '0 0 0 2px rgba(255, 77, 79, 0.12)'
+                  : 'none',
+                transition: 'border-color 0.2s, box-shadow 0.2s',
+              }}
+              aria-invalid={Boolean(capacityError)}
+              aria-describedby="capacity-error"
+              required
+            />
+
+            {capacityError && (
+              <small
+                id="capacity-error"
+                role="alert"
+                style={{
+                  display: 'block',
+                  marginTop: '5px',
+                  color: '#ff4d4f',
+                  fontSize: '12px',
+                  lineHeight: 1.5,
+                }}
+              >
+                <span style={{ marginRight: '4px' }}>⚠</span>
+                {capacityError}
+              </small>
+            )}
+
+            <small
+              style={{
+                display: 'block',
+                marginTop: '5px',
+                color: '#888',
+                fontSize: '12px',
               }}
             >
-              <option value="Nhà trẻ">Khối Nhà trẻ</option>
-              <option value="Mầm">Khối Mầm</option>
-              <option value="Chồi">Khối Chồi</option>
-              <option value="Lá">Khối Lá</option>
-            </select>
-          </div>
-
-          <div className="form-group">
-            <label>Phòng học</label>
-            <input
-              type="text"
-              placeholder="VD: P.203 Lầu 2"
-              value={newClass.room}
-              onChange={(e) => setNewClass({ ...newClass, room: e.target.value })}
-            />
-          </div>
-
-          <div className="form-group">
-            <label>Sĩ số tối đa</label>
-            <input
-              type="number"
-              value={newClass.capacity}
-              onChange={(e) => setNewClass({ ...newClass, capacity: Number(e.target.value) })}
-            />
-          </div>
-
-          <div className="form-group">
-            <label>Năm học</label>
-            <input
-              type="text"
-              value={newClass.schoolYear}
-              onChange={(e) => setNewClass({ ...newClass, schoolYear: e.target.value })}
-            />
-          </div>
-
-          <div className="form-group">
-            <label>Giáo viên chủ nhiệm</label>
-            <select
-              value={newClass.mainTeacher}
-              onChange={(e) => setNewClass({ ...newClass, mainTeacher: e.target.value })}
-            >
-              {initialTeachers.map((t) => (
-                <option key={t.id} value={t.name}>
-                  {t.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="form-group">
-            <label>Giáo viên phụ tá</label>
-            <input
-              type="text"
-              placeholder="Tên giáo viên phụ tá"
-              value={newClass.assistantTeacher}
-              onChange={(e) => setNewClass({ ...newClass, assistantTeacher: e.target.value })}
-            />
+              Sĩ số cho phép từ 1 đến 50 trẻ.
+            </small>
           </div>
         </form>
       </Modal>
 
-      {/* Modal Xem Danh Sách Học Sinh Trong Lớp */}
       {selectedClassData && (
         <Modal
           isOpen={isClassDetailOpen}
           onClose={() => setIsClassDetailOpen(false)}
-          title={`Danh Sách Học Sinh: ${selectedClassData.name}`}
+          title={`Danh Sách Trẻ: ${selectedClassData.tenLopHoc}`}
           maxWidth="680px"
           footer={
             <div className="modal-buttons">
-              <button className="btn-secondary" onClick={() => setIsClassDetailOpen(false)}>
-                Đóng
-              </button>
+              <button className="btn-secondary" onClick={() => setIsClassDetailOpen(false)}>Đóng</button>
             </div>
           }
         >
           <div>
             <div className="class-detail-meta">
-              <span>Khối: <strong>{selectedClassData.grade}</strong></span>
-              <span>Độ tuổi: <strong>{selectedClassData.ageGroup}</strong></span>
-              <span>GVCN: <strong>{selectedClassData.mainTeacher}</strong></span>
-              <span>Phòng: <strong>{selectedClassData.room}</strong></span>
+              <span>Khối: <strong>{getGrade(selectedClassData.doTuoi)}</strong></span>
+              <span>Độ tuổi: <strong>{selectedClassData.doTuoi}</strong></span>
+              <span>Phòng: <strong>{selectedClassData.phongHoc}</strong></span>
+              <span>Sĩ số: <strong>{childrenInClass.length}/{selectedClassData.soLuongToiDa}</strong></span>
             </div>
-
             <h4 style={{ margin: '16px 0 8px', fontSize: '14px' }}>
-              Danh sách học sinh trong lớp ({childrenInClass.length} học sinh mẫu):
+              Danh sách trẻ trong lớp ({childrenInClass.length}):
             </h4>
-
             {childrenInClass.length > 0 ? (
               <div className="table-responsive">
                 <table className="custom-table">
                   <thead>
                     <tr>
-                      <th>Mã HS</th>
-                      <th>Họ và Tên</th>
-                      <th>Nickname</th>
+                      <th>Mã trẻ</th>
+                      <th>Họ và tên</th>
                       <th>Ngày sinh</th>
-                      <th>Phụ huynh</th>
-                      <th>Điểm danh</th>
+                      <th>Nơi sinh</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {childrenInClass.map((c) => (
-                      <tr key={c.id}>
-                        <td><strong>{c.id}</strong></td>
-                        <td>{c.name}</td>
-                        <td><span className="badge-nickname">{c.nickname}</span></td>
-                        <td>{c.dob}</td>
-                        <td>{c.parentName} ({c.parentPhone})</td>
-                        <td>
-                          <span className={`status-pill ${c.attendanceToday === 'Có mặt' ? 'pill-green' : 'pill-yellow'}`}>
-                            {c.attendanceToday}
-                          </span>
-                        </td>
+                    {childrenInClass.map((child) => (
+                      <tr key={child.maTre}>
+                        <td><strong>{child.maTre}</strong></td>
+                        <td>{`${child.hoTenDemTre} ${child.tenTre}`}</td>
+                        <td>{formatDate(child.ngayThangNamSinh)}</td>
+                        <td>{child.noiSinh}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -358,7 +624,7 @@ export default function ClassesManagement({ onShowToast }) {
             ) : (
               <div className="empty-state-hint">
                 <Baby size={28} />
-                <p>Hiện lớp học này chưa có học sinh nào được phân vào.</p>
+                <p>Hiện lớp học này chưa có trẻ nào được phân vào.</p>
               </div>
             )}
           </div>

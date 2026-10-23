@@ -98,7 +98,8 @@ CREATE TABLE TREEM
     tenTre NVARCHAR(100) NOT NULL,
     ngayThangNamSinh DATETIME NOT NULL,
     noiSinh NVARCHAR(100) NOT NULL,
-    maLopHoc INT NOT NULL,
+    maLopHoc INT NULL,
+    trangThaiHocTap NVARCHAR(30) NOT NULL DEFAULT N'Đang học',
 
     CONSTRAINT PK_TREEM
         PRIMARY KEY (maTre)
@@ -314,4 +315,39 @@ SELECT TABLE_NAME
 FROM INFORMATION_SCHEMA.TABLES
 WHERE TABLE_TYPE = 'BASE TABLE'
 ORDER BY TABLE_NAME;
+GO
+IF COL_LENGTH('dbo.LOPHOC', 'SoLuongToiDa') IS NULL
+BEGIN
+    ALTER TABLE dbo.LOPHOC
+    ADD SoLuongToiDa INT NOT NULL
+        CONSTRAINT DF_LOPHOC_SoLuongToiDa DEFAULT 25;
+END
+GO
+
+-- Thêm cột DoTuoi nếu chưa tồn tại
+IF COL_LENGTH('dbo.LOPHOC', 'DoTuoi') IS NULL
+BEGIN
+    ALTER TABLE dbo.LOPHOC
+    ADD DoTuoi NVARCHAR(20) NOT NULL
+        CONSTRAINT DF_LOPHOC_DoTuoi DEFAULT N'3-4 tuổi';
+END
+GO
+
+-- Thêm cột trangThai cho tài khoản nếu chưa tồn tại
+IF COL_LENGTH('dbo.TAIKHOAN', 'trangThai') IS NULL
+BEGIN
+    ALTER TABLE dbo.TAIKHOAN
+    ADD trangThai BIT NOT NULL
+        CONSTRAINT DF_TAIKHOAN_trangThai DEFAULT 1;
+END
+GO
+
+-- Kiểm tra lớp học
+SELECT * FROM dbo.LOPHOC;
+
+-- Kiểm tra tài khoản
+SELECT * FROM dbo.TAIKHOAN;
+
+-- Kiểm tra trẻ em
+SELECT * FROM dbo.TREEM;
 GO
