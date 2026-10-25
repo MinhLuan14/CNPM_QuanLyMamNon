@@ -4,23 +4,23 @@ GO
 -- =============================================
 -- XÓA DATABASE CŨ NẾU ĐÃ TỒN TẠI
 -- =============================================
-IF DB_ID('QLMamNon_FInal') IS NOT NULL
+IF DB_ID('QLMamNon') IS NOT NULL
 BEGIN
-    ALTER DATABASE QLMamNon_FInal
+    ALTER DATABASE QLMamNon
     SET SINGLE_USER
     WITH ROLLBACK IMMEDIATE;
 
-    DROP DATABASE QLMamNon_FInal;
+    DROP DATABASE QLMamNon;
 END
 GO
 
 -- =============================================
 -- TẠO DATABASE
 -- =============================================
-CREATE DATABASE QLMamNon_FInal
+CREATE DATABASE QLMamNon
 GO
 
-USE QLMamNon_FInal
+USE QLMamNon
 GO
 -- 1. TAIKHOAN
 CREATE TABLE TAIKHOAN
@@ -479,12 +479,5 @@ BEGIN CATCH
     THROW;
 END CATCH;
 GO
-USE QLMamNon_FInal;
-GO
-
-SELECT TABLE_SCHEMA, TABLE_NAME
-FROM INFORMATION_SCHEMA.TABLES
-WHERE TABLE_TYPE = 'BASE TABLE'
-ORDER BY TABLE_NAME;
 
 
