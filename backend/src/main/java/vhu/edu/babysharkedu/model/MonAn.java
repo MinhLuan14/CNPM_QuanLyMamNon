@@ -6,6 +6,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.math.BigDecimal;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -29,6 +30,9 @@ public class MonAn {
 
     @Column(name = "thanhPhan", length = 500)
     private String thanhPhan;
+
+    @Column(name = "donGia", precision = 12, scale = 2)
+    private BigDecimal donGia;
 
     @Column(name = "trangThai")
     private Boolean trangThai;

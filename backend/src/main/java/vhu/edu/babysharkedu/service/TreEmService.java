@@ -9,6 +9,8 @@ import java.util.Map;
 import java.util.Set;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -23,8 +25,10 @@ import vhu.edu.babysharkedu.model.LopHoc;
 import vhu.edu.babysharkedu.model.TreEm;
 import vhu.edu.babysharkedu.repository.HocPhiRepository;
 import vhu.edu.babysharkedu.repository.LopHocRepository;
+import vhu.edu.babysharkedu.repository.PhuHuynhRepository;
 import vhu.edu.babysharkedu.repository.PhuHuynhTreRepository;
 import vhu.edu.babysharkedu.repository.TreEmRepository;
+import vhu.edu.babysharkedu.security.TaiKhoanPrincipal;
 
 @Service
 public class TreEmService {
@@ -37,26 +41,42 @@ public class TreEmService {
     private final LopHocRepository lopHocRepository;
     private final HocPhiRepository hocPhiRepository;
     private final PhuHuynhTreRepository phuHuynhTreRepository;
+    private final PhuHuynhRepository phuHuynhRepository;
 
     public TreEmService(
             TreEmRepository treEmRepository,
             LopHocRepository lopHocRepository,
             HocPhiRepository hocPhiRepository,
-            PhuHuynhTreRepository phuHuynhTreRepository) {
+            PhuHuynhTreRepository phuHuynhTreRepository,
+            PhuHuynhRepository phuHuynhRepository) {
         this.treEmRepository = treEmRepository;
         this.lopHocRepository = lopHocRepository;
         this.hocPhiRepository = hocPhiRepository;
         this.phuHuynhTreRepository = phuHuynhTreRepository;
+        this.phuHuynhRepository = phuHuynhRepository;
     }
 
     @Transactional(readOnly = true)
-    public List<TreEmDTO> layTatCa() {
-        return treEmRepository.findAllByOrderByMaTre().stream().map(this::toDTO).toList();
+    public List<TreEmDTO> layTatCa(Authentication authentication) {
+        if (laNhanVien(authentication)) {
+            return treEmRepository.findAllByOrderByMaTre().stream().map(this::toDTO).toList();
+        }
+        Integer maPhuHuynh = timMaPhuHuynh(authentication);
+        return phuHuynhTreRepository
+                .findAllByPhuHuynhMaPhuHuynhOrderByTreEmMaTreAsc(maPhuHuynh)
+                .stream().map(lienKet -> toDTO(lienKet.getTreEm())).toList();
     }
 
     @Transactional(readOnly = true)
-    public TreEmDTO layChiTiet(Integer maTre) {
-        return toDTO(timTre(maTre));
+    public TreEmDTO layChiTiet(Integer maTre, Authentication authentication) {
+        TreEm treEm = timTre(maTre);
+        if (!laNhanVien(authentication)) {
+            Integer maPhuHuynh = timMaPhuHuynh(authentication);
+            if (!phuHuynhTreRepository.existsByPhuHuynhMaPhuHuynhAndTreEmMaTre(maPhuHuynh, maTre)) {
+                throw new AccessDeniedException("Bạn không có quyền xem thông tin của trẻ này.");
+            }
+        }
+        return toDTO(treEm);
     }
 
     @Transactional
@@ -122,6 +142,15 @@ public class TreEmService {
     @Transactional(readOnly = true)
     public List<TreEmDTO> layChuaPhanLop() {
         return treEmRepository.findAllByLopHocIsNullOrderByMaTre()
+                .stream().map(this::toDTO).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<TreEmDTO> layTreChuaLienKet(Integer maPhuHuynh) {
+        if (!phuHuynhRepository.existsById(maPhuHuynh)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy hồ sơ phụ huynh.");
+        }
+        return treEmRepository.findAllChuaLienKetVoiPhuHuynh(maPhuHuynh)
                 .stream().map(this::toDTO).toList();
     }
 
@@ -288,6 +317,25 @@ public class TreEmService {
                 treEm.getNoiSinh(),
                 lopHoc == null ? null : lopHoc.getMaLopHoc(),
                 lopHoc == null ? null : lopHoc.getTenLopHoc(),
-                treEm.getTrangThaiHocTap());
+                treEm.getTrangThaiHocTap(),
+                "/api/tre-em/" + treEm.getMaTre() + "/anh-dai-dien");
+    }
+
+    private boolean laNhanVien(Authentication authentication) {
+        return authentication != null
+                && authentication.getPrincipal() instanceof TaiKhoanPrincipal principal
+                && ("ADMIN".equals(principal.getVaiTro()) || "GIAOVIEN".equals(principal.getVaiTro()));
+    }
+
+    private Integer timMaPhuHuynh(Authentication authentication) {
+        if (authentication == null
+                || !(authentication.getPrincipal() instanceof TaiKhoanPrincipal principal)
+                || !"PHUHUYNH".equals(principal.getVaiTro())) {
+            throw new AccessDeniedException("Bạn không có quyền xem danh sách trẻ.");
+        }
+        return phuHuynhRepository.findByTaiKhoanMaTaiKhoan(principal.getMaTaiKhoan())
+                .map(phuHuynh -> phuHuynh.getMaPhuHuynh())
+                .orElseThrow(() -> new AccessDeniedException(
+                        "Tài khoản chưa được gắn với hồ sơ phụ huynh."));
     }
 }

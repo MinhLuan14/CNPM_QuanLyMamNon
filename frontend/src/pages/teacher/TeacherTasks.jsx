@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { CheckCircle2, ClipboardList } from 'lucide-react'
 
-export default function TeacherTasks({ tasks: initialTasks }) {
+export default function TeacherTasks({ tasks: initialTasks, isAvailable = true }) {
   const [tasks, setTasks] = useState(initialTasks)
   const toggleTask = (taskId) => {
     setTasks((current) => current.map((task) => (
@@ -25,7 +25,9 @@ export default function TeacherTasks({ tasks: initialTasks }) {
           <div><ClipboardList size={19} /><h3>Công việc được giao</h3></div>
           <span className="teacher-status-pill">{tasks.filter((task) => task.status === 'Đã hoàn thành').length}/{tasks.length} hoàn thành</span>
         </div>
-        {tasks.length ? (
+        {!isAvailable ? (
+          <div className="teacher-empty">Hệ thống chưa có API công việc và báo cáo cho giáo viên.</div>
+        ) : tasks.length ? (
           <div className="teacher-task-list">
             {tasks.map((task) => (
               <label className={`teacher-task-row ${task.status === 'Đã hoàn thành' ? 'completed' : ''}`} key={task.id}>

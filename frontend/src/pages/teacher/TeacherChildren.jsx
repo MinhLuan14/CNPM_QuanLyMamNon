@@ -9,7 +9,7 @@ export default function TeacherChildren({ data }) {
         <div>
           <span className="teacher-eyebrow">HỒ SƠ LỚP PHỤ TRÁCH</span>
           <h2>Danh sách trẻ</h2>
-          <p>{classroom ? `Lớp ${classroom.name} · ` : ''}Chỉ hiển thị hồ sơ thuộc lớp được gắn với tài khoản mẫu này.</p>
+          <p>{classroom ? `Lớp ${classroom.name} · ` : ''}Danh sách trẻ thuộc các lớp đang được phân công.</p>
         </div>
       </div>
       <section className="teacher-panel">
@@ -26,8 +26,8 @@ export default function TeacherChildren({ data }) {
                   <tr key={child.id}>
                     <td><strong><Baby size={14} style={{ verticalAlign: 'middle', marginRight: 6 }} />{child.name}</strong><br />{child.nickname}</td>
                     <td>{new Date(`${child.dob}T00:00:00`).toLocaleDateString('vi-VN')}</td>
-                    <td>{child.parentName} ({child.parentRelationship})</td>
-                    <td>{child.parentPhone}</td>
+                    <td>{child.parentName || 'Chưa có dữ liệu'}{child.parentRelationship ? ` (${child.parentRelationship})` : ''}</td>
+                    <td>{child.parentPhone || 'Chưa có dữ liệu'}</td>
                     <td><span className="teacher-status-pill">{child.status}</span></td>
                   </tr>
                 ))}
@@ -35,11 +35,11 @@ export default function TeacherChildren({ data }) {
             </table>
           </div>
         ) : (
-          <div className="teacher-empty">Chưa có hồ sơ trẻ minh họa cho lớp này. Đây là giao diện tĩnh, chưa đọc dữ liệu thật.</div>
+          <div className="teacher-empty">Chưa có trẻ đang theo học trong lớp được phân công.</div>
         )}
       </section>
       <p style={{ margin: 0, color: '#82949e', fontSize: 10 }}>
-        Danh sách này là dữ liệu mẫu có sẵn trong frontend, không phải danh sách đầy đủ của lớp.
+        Thông tin được tải từ hồ sơ trẻ thuộc lớp được phân công.
       </p>
     </div>
   )

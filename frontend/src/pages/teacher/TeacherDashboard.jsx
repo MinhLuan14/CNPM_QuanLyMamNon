@@ -16,7 +16,7 @@ export default function TeacherDashboard({ data, onNavigate }) {
     day: 'numeric',
     month: 'long',
   })
-  const openTasks = tasks.filter((task) => task.status !== 'Đã hoàn thành').length
+  const openTasks = data.availability.tasks ? tasks.filter((task) => task.status !== 'Đã hoàn thành').length : null
   const todayMenu = menu[0]
 
   return (
@@ -42,19 +42,19 @@ export default function TeacherDashboard({ data, onNavigate }) {
       <section className="teacher-stat-grid" aria-label="Tóm tắt công việc">
         <article className="teacher-stat-card">
           <span className="teacher-stat-icon"><School size={22} /></span>
-          <div><span>Lớp phụ trách</span><strong>{classroom ? '01' : '—'}</strong></div>
+          <div><span>Lớp phụ trách</span><strong>{data.classCount || '—'}</strong></div>
         </article>
         <article className="teacher-stat-card">
           <span className="teacher-stat-icon mint"><Users size={22} /></span>
-          <div><span>Trẻ trong dữ liệu mẫu</span><strong>{children.length}</strong></div>
+          <div><span>Trẻ trong lớp được phân công</span><strong>{children.length}</strong></div>
         </article>
         <article className="teacher-stat-card">
           <span className="teacher-stat-icon amber"><ClipboardList size={22} /></span>
-          <div><span>Việc cần hoàn thành</span><strong>{openTasks}</strong></div>
+          <div><span>Việc cần hoàn thành</span><strong>{openTasks ?? 'Chưa hỗ trợ'}</strong></div>
         </article>
         <article className="teacher-stat-card">
           <span className="teacher-stat-icon purple"><Bell size={22} /></span>
-          <div><span>Thông báo mới</span><strong>{notifications.length}</strong></div>
+          <div><span>Thông báo mới</span><strong>{data.availability.notifications ? notifications.length : 'Chưa hỗ trợ'}</strong></div>
         </article>
       </section>
 
@@ -77,7 +77,7 @@ export default function TeacherDashboard({ data, onNavigate }) {
                 <span className="teacher-class-room">Phòng {classroom.room}</span>
               </div>
               <div className="teacher-panel-heading" style={{ marginTop: 20 }}>
-                <div><Users size={18} /><h3>Trẻ trong danh sách mẫu</h3></div>
+                <div><Users size={18} /><h3>Trẻ trong danh sách lớp</h3></div>
                 <button className="teacher-link-button" onClick={() => onNavigate('Danh sách trẻ')}>
                   Xem danh sách <ArrowRight size={14} />
                 </button>
@@ -96,7 +96,7 @@ export default function TeacherDashboard({ data, onNavigate }) {
                   ))}
                 </div>
               ) : (
-                <div className="teacher-empty">Chưa có trẻ trong dữ liệu minh họa của lớp này.</div>
+                <div className="teacher-empty">Lớp được phân công hiện chưa có trẻ đang theo học.</div>
               )}
             </>
           ) : (
@@ -118,7 +118,7 @@ export default function TeacherDashboard({ data, onNavigate }) {
                 <div className="teacher-meal-row"><span className="teacher-meal-marker" /><div><strong>Bữa trưa</strong><span>{todayMenu.lunch.main}</span></div></div>
                 <div className="teacher-meal-row"><span className="teacher-meal-marker" /><div><strong>Bữa xế</strong><span>{todayMenu.afternoonSnack.dish}</span></div></div>
               </div>
-            ) : <div className="teacher-empty">Chưa có thực đơn mẫu.</div>}
+            ) : <div className="teacher-empty">{data.availability.menu ? 'Chưa có thực đơn.' : 'API thực đơn hiện chỉ cho phép tài khoản quản trị truy cập.'}</div>}
           </section>
 
           <section className="teacher-panel">
@@ -128,7 +128,7 @@ export default function TeacherDashboard({ data, onNavigate }) {
                 Xem việc <ArrowRight size={14} />
               </button>
             </div>
-            {tasks.filter((task) => task.status !== 'Đã hoàn thành').slice(0, 2).length ? (
+            {!data.availability.tasks ? <div className="teacher-empty">Hệ thống chưa có API công việc dành cho giáo viên.</div> : tasks.filter((task) => task.status !== 'Đã hoàn thành').slice(0, 2).length ? (
               <div className="teacher-task-list">
                 {tasks.filter((task) => task.status !== 'Đã hoàn thành').slice(0, 2).map((task) => (
                   <div className="teacher-task-row" key={task.id}>

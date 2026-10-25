@@ -26,8 +26,8 @@ export default function TeacherClass({ data }) {
               <div className="teacher-detail-item"><span>Năm học</span><strong>{classroom.schoolYear}</strong></div>
               <div className="teacher-detail-item"><span>Giáo viên chủ nhiệm</span><strong>{teacher.name}</strong></div>
               <div className="teacher-detail-item"><span>Giáo viên phối hợp</span><strong>{classroom.assistantTeacher}</strong></div>
-              <div className="teacher-detail-item"><span>Sĩ số theo hồ sơ lớp</span><strong>{classroom.current}/{classroom.capacity} trẻ</strong></div>
-              <div className="teacher-detail-item"><span>Trẻ trong fixture minh họa</span><strong>{children.length} trẻ</strong></div>
+              <div className="teacher-detail-item"><span>Sĩ số theo hồ sơ lớp</span><strong>{classroom.current}/{classroom.capacity ?? '—'} trẻ</strong></div>
+              <div className="teacher-detail-item"><span>Trẻ trong lớp</span><strong>{children.length} trẻ</strong></div>
             </div>
           </section>
           <section className="teacher-panel">
@@ -42,7 +42,7 @@ export default function TeacherClass({ data }) {
           </section>
         </>
       ) : (
-        <section className="teacher-panel teacher-empty">Tài khoản demo này chưa được phân công lớp mẫu. Nội dung lớp sẽ được bổ sung khi có dữ liệu phù hợp.</section>
+        <section className="teacher-panel teacher-empty">Tài khoản hiện chưa có lớp đang được phân công.</section>
       )}
     </div>
   )

@@ -9,6 +9,7 @@ import {
     Wallet,
     CreditCard,
     ShieldCheck,
+    LifeBuoy,
     X,
 } from 'lucide-react'
 import logoImg from '../assets/Logo.png'
@@ -31,13 +32,18 @@ function Sidebar({
     sidebarOpen,
     setSidebarOpen,
     role,
+    items,
+    subtitle,
+    menuLabel,
+    footerText,
 }) {
     const allowedMenus = {
         ADMIN: menuItems.map((item) => item.title),
         GIAOVIEN: ['Tổng quan', 'Quản lý trẻ', 'Quản lý phụ huynh', 'Quản lý lớp học', 'Thực đơn', 'Học phí & tiền ăn'],
         PHUHUYNH: ['Tổng quan', 'Quản lý trẻ', 'Thực đơn', 'Học phí & tiền ăn', 'Thanh toán'],
     }
-    const visibleMenuItems = menuItems.filter((item) => (allowedMenus[role] || ['Tổng quan']).includes(item.title))
+    const visibleMenuItems = items || menuItems.filter((item) => (allowedMenus[role] || ['Tổng quan']).includes(item.title))
+    const brandSubtitle = subtitle || (role === 'ADMIN' ? 'Preschool Management' : '')
 
     return (
         <>
@@ -57,7 +63,7 @@ function Sidebar({
 
                     <div>
                         <h2>babyShark</h2>
-                        <span>Preschool Management</span>
+                        {brandSubtitle && <span>{brandSubtitle}</span>}
                     </div>
 
                     <button
@@ -69,6 +75,7 @@ function Sidebar({
                     </button>
                 </div>
 
+                {menuLabel && <p className="menu-label">{menuLabel}</p>}
                 <nav className="sidebar-menu">
                     {visibleMenuItems.map((item) => {
                         const Icon = item.icon
@@ -92,7 +99,7 @@ function Sidebar({
 
                 <div className="sidebar-bottom">
                     <div className="sidebar-version">
-                        babyShark v1.0.0
+                        {footerText || 'babyShark v1.0.0'}
                     </div>
                 </div>
             </aside>

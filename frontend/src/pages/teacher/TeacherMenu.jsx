@@ -1,6 +1,6 @@
 import { CalendarDays, Utensils } from 'lucide-react'
 
-export default function TeacherMenu({ menu }) {
+export default function TeacherMenu({ menu, isAvailable = true }) {
   return (
     <div className="teacher-page">
       <div className="teacher-page-heading">
@@ -10,7 +10,9 @@ export default function TeacherMenu({ menu }) {
           <p>Tham khảo các bữa ăn và nội dung dinh dưỡng trong dữ liệu minh họa.</p>
         </div>
       </div>
-      <div className="teacher-week-menu">
+      {!isAvailable ? (
+        <section className="teacher-panel teacher-empty">API thực đơn hiện chỉ cho phép tài khoản quản trị truy cập.</section>
+      ) : <div className="teacher-week-menu">
         {menu.map((day) => (
           <section className="teacher-panel teacher-menu-day" key={day.day}>
             <div className="teacher-panel-heading" style={{ marginBottom: 3 }}>
@@ -24,7 +26,7 @@ export default function TeacherMenu({ menu }) {
             </div>
           </section>
         ))}
-      </div>
+      </div>}
     </div>
   )
 }

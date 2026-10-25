@@ -21,26 +21,65 @@ import org.springframework.web.bind.annotation.RestController;
 import vhu.edu.babysharkedu.dto.AuthResponse;
 import vhu.edu.babysharkedu.dto.DangNhapRequest;
 import vhu.edu.babysharkedu.dto.DoiMatKhauRequest;
+import vhu.edu.babysharkedu.dto.KhoiPhucTaiKhoanRequest;
 import vhu.edu.babysharkedu.dto.MessageResponse;
 import vhu.edu.babysharkedu.security.TaiKhoanPrincipal;
 import vhu.edu.babysharkedu.service.TaiKhoanService;
+import vhu.edu.babysharkedu.service.KhoiPhucTaiKhoanService;
+import vhu.edu.babysharkedu.dto.YeuCauHoTroTaiKhoanRequest;
+import vhu.edu.babysharkedu.service.YeuCauHoTroTaiKhoanService;
 
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
     private final SecurityContextRepository securityContextRepository;
     private final TaiKhoanService taiKhoanService;
+    private final YeuCauHoTroTaiKhoanService yeuCauHoTroTaiKhoanService;
+    private final KhoiPhucTaiKhoanService khoiPhucTaiKhoanService;
 
     public AuthController(
             SecurityContextRepository securityContextRepository,
-            TaiKhoanService taiKhoanService) {
+            TaiKhoanService taiKhoanService,
+            YeuCauHoTroTaiKhoanService yeuCauHoTroTaiKhoanService,
+            KhoiPhucTaiKhoanService khoiPhucTaiKhoanService) {
         this.securityContextRepository = securityContextRepository;
         this.taiKhoanService = taiKhoanService;
+        this.yeuCauHoTroTaiKhoanService = yeuCauHoTroTaiKhoanService;
+        this.khoiPhucTaiKhoanService = khoiPhucTaiKhoanService;
     }
 
     @GetMapping("/csrf")
     public Map<String, String> csrf(CsrfToken csrfToken) {
         return Map.of("token", csrfToken.getToken());
+    }
+
+    @PostMapping("/yeu-cau-ho-tro")
+    @org.springframework.web.bind.annotation.ResponseStatus(
+            org.springframework.http.HttpStatus.ACCEPTED)
+    public MessageResponse guiYeuCauHoTro(
+            @RequestBody YeuCauHoTroTaiKhoanRequest request,
+            HttpServletRequest httpRequest) {
+        yeuCauHoTroTaiKhoanService.guiYeuCau(request, httpRequest.getRemoteAddr());
+        return new MessageResponse(
+                "Nếu thông tin phù hợp với hồ sơ nhà trường, yêu cầu sẽ được nhân viên tiếp nhận và hỗ trợ.");
+    }
+
+    @PostMapping("/forgot-username")
+    @org.springframework.web.bind.annotation.ResponseStatus(
+            org.springframework.http.HttpStatus.ACCEPTED)
+    public MessageResponse quenTenDangNhap(
+            @RequestBody KhoiPhucTaiKhoanRequest request,
+            HttpServletRequest httpRequest) {
+        return khoiPhucTaiKhoanService.guiTenDangNhap(request, httpRequest.getRemoteAddr());
+    }
+
+    @PostMapping("/forgot-password")
+    @org.springframework.web.bind.annotation.ResponseStatus(
+            org.springframework.http.HttpStatus.ACCEPTED)
+    public MessageResponse quenMatKhau(
+            @RequestBody KhoiPhucTaiKhoanRequest request,
+            HttpServletRequest httpRequest) {
+        return khoiPhucTaiKhoanService.guiMatKhauTamThoi(request, httpRequest.getRemoteAddr());
     }
 
     @PostMapping("/login")
@@ -69,6 +108,7 @@ public class AuthController {
     }
 
     @PostMapping("/change-password")
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'PHUHUYNH', 'GIAOVIEN')")
     public MessageResponse doiMatKhau(
             @RequestBody DoiMatKhauRequest request,
             Authentication authentication) {
@@ -76,7 +116,9 @@ public class AuthController {
         taiKhoanService.doiMatKhau(
                 principal.getMaTaiKhoan(),
                 request.matKhauHienTai(),
-                request.matKhauMoi());
+                request.matKhauMoi(),
+                request.xacNhanMatKhauMoi());
+        principal.setMustChangePassword(false);
         return new MessageResponse("Đổi mật khẩu thành công.");
     }
 
@@ -93,6 +135,10 @@ public class AuthController {
     }
 
     private AuthResponse toResponse(TaiKhoanPrincipal principal) {
-        return new AuthResponse(principal.getMaTaiKhoan(), principal.getUsername(), principal.getVaiTro());
+        return new AuthResponse(
+                principal.getMaTaiKhoan(),
+                principal.getUsername(),
+                principal.getVaiTro(),
+                principal.isMustChangePassword());
     }
 }

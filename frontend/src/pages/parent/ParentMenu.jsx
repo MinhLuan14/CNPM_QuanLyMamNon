@@ -7,7 +7,7 @@ const dateLabel = (value) => {
     : date.toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'long' })
 }
 
-export default function ParentMenu({ menu }) {
+export default function ParentMenu({ menu, isAvailable = true }) {
   const grouped = menu.reduce((groups, item) => {
     const key = item.date?.slice(0, 10) || 'unknown'
     groups[key] ||= []
@@ -23,7 +23,13 @@ export default function ParentMenu({ menu }) {
         <h2>Thực đơn trong tuần</h2>
         <p>Thực đơn do nhà trường công bố trong 7 ngày tới.</p>
       </div>
-      {days.length ? (
+      {!isAvailable ? (
+        <section className="parent-panel parent-empty-large">
+          <Utensils size={28} />
+          <h3>Chưa thể tải thực đơn</h3>
+          <p>API thực đơn hiện chỉ cho phép tài khoản quản trị truy cập.</p>
+        </section>
+      ) : days.length ? (
         <div className="parent-week-menu">
           {days.map(([day, items]) => (
             <section className="parent-panel parent-day-card" key={day}>

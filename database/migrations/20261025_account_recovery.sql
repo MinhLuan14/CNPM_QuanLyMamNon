@@ -1,0 +1,53 @@
+SET XACT_ABORT ON;
+GO
+
+BEGIN TRY
+    BEGIN TRANSACTION;
+
+    IF OBJECT_ID(N'dbo.TAIKHOAN_KHOIPHUCHOI', N'U') IS NULL
+    BEGIN
+        CREATE TABLE dbo.TAIKHOAN_KHOIPHUCHOI
+        (
+            maToken BIGINT IDENTITY(1,1) NOT NULL,
+            maTaiKhoan INT NOT NULL,
+            tokenHash CHAR(64) NOT NULL,
+            thoiGianTao DATETIME2 NOT NULL,
+            thoiGianHetHan DATETIME2 NOT NULL,
+            thoiGianSuDung DATETIME2 NULL,
+            CONSTRAINT PK_TAIKHOAN_KHOIPHUCHOI PRIMARY KEY (maToken),
+            CONSTRAINT UQ_TAIKHOAN_KHOIPHUCHOI_tokenHash UNIQUE (tokenHash),
+            CONSTRAINT FK_TAIKHOAN_KHOIPHUCHOI_TAIKHOAN
+                FOREIGN KEY (maTaiKhoan) REFERENCES dbo.TAIKHOAN(maTaiKhoan)
+        );
+
+        CREATE INDEX IX_TAIKHOAN_KHOIPHUCHOI_account_expiry
+            ON dbo.TAIKHOAN_KHOIPHUCHOI(maTaiKhoan, thoiGianHetHan);
+    END;
+
+    IF OBJECT_ID(N'dbo.TAIKHOAN_KHOIPHUCHOI_YEUCAU', N'U') IS NULL
+    BEGIN
+        CREATE TABLE dbo.TAIKHOAN_KHOIPHUCHOI_YEUCAU
+        (
+            maLuot BIGINT IDENTITY(1,1) NOT NULL,
+            emailHash CHAR(64) NOT NULL,
+            ipHash CHAR(64) NOT NULL,
+            thoiGianYeuCau DATETIME2 NOT NULL,
+            CONSTRAINT PK_TAIKHOAN_KHOIPHUCHOI_YEUCAU PRIMARY KEY (maLuot)
+        );
+
+        CREATE INDEX IX_TAIKHOAN_KHOIPHUCHOI_YEUCAU_email_time
+            ON dbo.TAIKHOAN_KHOIPHUCHOI_YEUCAU(emailHash, thoiGianYeuCau);
+        CREATE INDEX IX_TAIKHOAN_KHOIPHUCHOI_YEUCAU_ip_time
+            ON dbo.TAIKHOAN_KHOIPHUCHOI_YEUCAU(ipHash, thoiGianYeuCau);
+        CREATE INDEX IX_TAIKHOAN_KHOIPHUCHOI_YEUCAU_time
+            ON dbo.TAIKHOAN_KHOIPHUCHOI_YEUCAU(thoiGianYeuCau);
+    END;
+
+    COMMIT TRANSACTION;
+END TRY
+BEGIN CATCH
+    IF @@TRANCOUNT > 0
+        ROLLBACK TRANSACTION;
+    THROW;
+END CATCH;
+GO

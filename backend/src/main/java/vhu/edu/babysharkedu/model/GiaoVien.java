@@ -9,6 +9,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
+import java.time.LocalDate;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -38,6 +39,15 @@ public class GiaoVien {
 
     @Column(name = "email", nullable = false, length = 100)
     private String email;
+
+    @Column(name = "ngaySinh")
+    private LocalDate ngaySinh;
+
+    @Column(name = "trinhDoChuyenMon", length = 255)
+    private String trinhDoChuyenMon;
+
+    @Column(name = "anhDaiDien", length = 255)
+    private String anhDaiDien;
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "maTaiKhoan", nullable = false, unique = true)

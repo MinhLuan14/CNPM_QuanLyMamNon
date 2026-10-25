@@ -654,6 +654,50 @@ button {
   color: #abb5c2;
 }
 
+.overview-data-warning {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border: 1px solid #f0d7a8;
+  border-radius: 9px;
+  color: #80520b;
+  background: #fff9ec;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.overview-data-warning svg {
+  flex: 0 0 auto;
+}
+
+.overview-chart-empty {
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  border-bottom-style: dashed;
+  color: #8d9aae;
+  font-size: 11px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.overview-inline-empty {
+  padding: 15px 0;
+  color: #8d9aae;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.overview-today-meals p {
+  margin: 0 0 6px;
+}
+
+.overview-today-meals p:last-child {
+  margin-bottom: 0;
+}
+
 .quick-panel {
   margin-top: 20px;
 }

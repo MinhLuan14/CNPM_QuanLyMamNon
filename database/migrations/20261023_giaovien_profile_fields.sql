@@ -1,0 +1,31 @@
+USE QLMamNon;
+GO
+
+SET XACT_ABORT ON;
+GO
+
+BEGIN TRY
+    BEGIN TRANSACTION;
+
+    IF COL_LENGTH(N'dbo.GIAOVIEN', N'ngaySinh') IS NULL
+    BEGIN
+        ALTER TABLE dbo.GIAOVIEN
+        ADD ngaySinh DATE NULL;
+    END;
+
+    IF COL_LENGTH(N'dbo.GIAOVIEN', N'trinhDoChuyenMon') IS NULL
+    BEGIN
+        ALTER TABLE dbo.GIAOVIEN
+        ADD trinhDoChuyenMon NVARCHAR(255) NULL;
+    END;
+
+    COMMIT TRANSACTION;
+END TRY
+BEGIN CATCH
+    IF @@TRANCOUNT > 0
+    BEGIN
+        ROLLBACK TRANSACTION;
+    END;
+    THROW;
+END CATCH;
+GO

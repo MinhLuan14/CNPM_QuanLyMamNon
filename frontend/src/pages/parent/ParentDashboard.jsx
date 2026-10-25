@@ -18,8 +18,8 @@ const localDate = (value) => {
 }
 
 export default function ParentDashboard({ portal, onNavigate }) {
-  const menuPreview = portal.menu.slice(0, 3)
-  const outstanding = portal.invoices.filter((invoice) => invoice.remainingAmount > 0)
+  const menuPreview = portal.availability.menu ? portal.menu.slice(0, 3) : []
+  const outstanding = portal.availability.invoices ? portal.invoices.filter((invoice) => invoice.remainingAmount > 0) : []
   const remainingTotal = outstanding.reduce((total, invoice) => total + invoice.remainingAmount, 0)
 
   return (
@@ -40,11 +40,11 @@ export default function ParentDashboard({ portal, onNavigate }) {
         </article>
         <article className="parent-stat-card">
           <span className="parent-stat-icon orange"><Wallet size={20} /></span>
-          <div><span>Khoản còn cần thanh toán</span><strong>{money(remainingTotal)}</strong></div>
+          <div><span>Khoản còn cần thanh toán</span><strong>{portal.availability.invoices ? money(remainingTotal) : 'Chưa hỗ trợ'}</strong></div>
         </article>
         <article className="parent-stat-card">
           <span className="parent-stat-icon green"><CreditCard size={20} /></span>
-          <div><span>Giao dịch đã ghi nhận</span><strong>{portal.payments.length}</strong></div>
+          <div><span>Giao dịch đã ghi nhận</span><strong>{portal.availability.payments ? portal.payments.length : 'Chưa hỗ trợ'}</strong></div>
         </article>
       </section>
 
@@ -64,7 +64,7 @@ export default function ParentDashboard({ portal, onNavigate }) {
                   <div className="parent-child-info">
                     <strong>{child.fullName}</strong>
                     <span>{child.className || 'Chưa xếp lớp'}</span>
-                    <small>Giáo viên: {child.teacherName || 'Chưa cập nhật'}</small>
+                    <small>Giáo viên: {child.teacherName || 'Chưa có dữ liệu'}</small>
                   </div>
                   <span className="parent-child-dob">{localDate(child.dateOfBirth)}</span>
                 </article>
@@ -95,7 +95,7 @@ export default function ParentDashboard({ portal, onNavigate }) {
           ) : (
             <div className="parent-empty">
               <CalendarDays size={22} />
-              <p>Nhà trường chưa cập nhật thực đơn cho hôm nay.</p>
+              <p>{portal.availability.menu ? 'Nhà trường chưa cập nhật thực đơn cho hôm nay.' : 'Cổng phụ huynh chưa có API thực đơn để tải dữ liệu.'}</p>
             </div>
           )}
         </section>
@@ -134,7 +134,7 @@ export default function ParentDashboard({ portal, onNavigate }) {
           </div>
           <div className="parent-empty">
             <Bell size={22} />
-            <p>Chức năng thông báo chưa được kết nối với dữ liệu nhà trường.</p>
+            <p>{portal.availability.notifications ? 'Chưa có thông báo.' : 'Chức năng thông báo chưa có API dữ liệu.'}</p>
           </div>
         </section>
       </div>

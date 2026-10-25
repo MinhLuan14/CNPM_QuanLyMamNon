@@ -7,7 +7,7 @@ const dateTime = (value) => {
   return Number.isNaN(date.getTime()) ? 'Chưa cập nhật' : date.toLocaleString('vi-VN')
 }
 
-export default function ParentPaymentHistory({ payments }) {
+export default function ParentPaymentHistory({ payments, isAvailable = true }) {
   return (
     <div className="parent-page">
       <div className="parent-page-intro">
@@ -16,7 +16,9 @@ export default function ParentPaymentHistory({ payments }) {
         <p>Các giao dịch được nhà trường ghi nhận cho hồ sơ phụ huynh của bạn.</p>
       </div>
       <section className="parent-panel parent-history-panel">
-        {payments.length ? (
+        {!isAvailable ? (
+          <div className="parent-empty-large"><History size={28} /><h3>Chưa thể tải giao dịch</h3><p>API thanh toán hiện chưa hỗ trợ truy vấn theo tài khoản phụ huynh.</p></div>
+        ) : payments.length ? (
           <div className="parent-table-wrap">
             <table className="parent-table">
               <thead><tr><th>Thời gian</th><th>Bé</th><th>Kỳ thu</th><th>Phương thức</th><th>Mã giao dịch</th><th>Số tiền</th><th>Trạng thái</th></tr></thead>

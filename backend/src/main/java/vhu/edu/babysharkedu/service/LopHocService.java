@@ -87,7 +87,8 @@ public class LopHocService {
                         tre.getNoiSinh(),
                         tre.getLopHoc() == null ? null : tre.getLopHoc().getMaLopHoc(),
                         tre.getLopHoc() == null ? null : tre.getLopHoc().getTenLopHoc(),
-                        tre.getTrangThaiHocTap()))
+                        tre.getTrangThaiHocTap(),
+                        "/api/tre-em/" + tre.getMaTre() + "/anh-dai-dien"))
                 .toList();
     }
 

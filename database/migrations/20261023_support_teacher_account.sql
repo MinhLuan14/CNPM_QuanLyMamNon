@@ -1,0 +1,49 @@
+USE QLMamNon;
+GO
+
+SET XACT_ABORT ON;
+GO
+
+BEGIN TRY
+    BEGIN TRANSACTION;
+
+    IF OBJECT_ID(N'dbo.YEUCAU_HOTRO_TAIKHOAN', N'U') IS NULL
+    BEGIN
+        THROW 50001, 'Cần áp dụng migration 20261023_parent_account_support.sql trước.', 1;
+    END;
+
+    IF COL_LENGTH(N'dbo.YEUCAU_HOTRO_TAIKHOAN', N'maGiaoVien') IS NULL
+    BEGIN
+        ALTER TABLE dbo.YEUCAU_HOTRO_TAIKHOAN
+            ADD maGiaoVien INT NULL;
+    END;
+
+    IF NOT EXISTS (
+        SELECT 1
+        FROM sys.foreign_keys
+        WHERE name = N'FK_YEUCAU_HOTRO_TAIKHOAN_GIAOVIEN'
+          AND parent_object_id = OBJECT_ID(N'dbo.YEUCAU_HOTRO_TAIKHOAN')
+    )
+    BEGIN
+        ALTER TABLE dbo.YEUCAU_HOTRO_TAIKHOAN
+            ADD CONSTRAINT FK_YEUCAU_HOTRO_TAIKHOAN_GIAOVIEN
+                FOREIGN KEY (maGiaoVien) REFERENCES dbo.GIAOVIEN(maGiaoVien);
+    END;
+
+    IF COL_LENGTH(N'dbo.YEUCAU_HOTRO_TAIKHOAN', N'loaiTaiKhoan') IS NULL
+    BEGIN
+        ALTER TABLE dbo.YEUCAU_HOTRO_TAIKHOAN
+            ADD loaiTaiKhoan VARCHAR(20) NOT NULL
+                CONSTRAINT DF_YEUCAU_HOTRO_TAIKHOAN_loaiTaiKhoan DEFAULT ('PHUHUYNH');
+    END;
+
+    COMMIT TRANSACTION;
+END TRY
+BEGIN CATCH
+    IF @@TRANCOUNT > 0
+    BEGIN
+        ROLLBACK TRANSACTION;
+    END;
+    THROW;
+END CATCH;
+GO

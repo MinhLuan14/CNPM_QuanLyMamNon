@@ -32,4 +32,7 @@ public class TaiKhoan {
 
     @Column(name = "trangThai", nullable = false, columnDefinition = "bit default 1")
     private Boolean trangThai = true;
+
+    @Column(name = "mustChangePassword", nullable = false, columnDefinition = "bit default 0")
+    private Boolean mustChangePassword = false;
 }

@@ -1,6 +1,6 @@
 import { Bell, Megaphone } from 'lucide-react'
 
-export default function TeacherNotifications({ notifications }) {
+export default function TeacherNotifications({ notifications, isAvailable = true }) {
   return (
     <div className="teacher-page">
       <div className="teacher-page-heading">
@@ -14,7 +14,9 @@ export default function TeacherNotifications({ notifications }) {
         <div className="teacher-panel-heading">
           <div><Bell size={19} /><h3>Thông báo gần đây</h3></div>
         </div>
-        {notifications.length ? (
+        {!isAvailable ? (
+          <div className="teacher-empty">Hệ thống chưa có API thông báo dành cho giáo viên.</div>
+        ) : notifications.length ? (
           <div className="teacher-notice-list">
             {notifications.map((notice) => (
               <article className="teacher-notice-row" key={notice.id}>

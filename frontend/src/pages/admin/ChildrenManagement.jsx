@@ -13,6 +13,7 @@ import {
   Users,
 } from 'lucide-react';
 import { authRequest, fetchCsrfToken, responseError } from '../../api/auth';
+import { API_BASE_URL } from '../../config';
 import Modal from '../../components/Modal';
 
 const STATUS_OPTIONS = ['Đang học', 'Tạm nghỉ', 'Đã nghỉ'];
@@ -54,12 +55,18 @@ export default function ChildrenManagement({ onShowToast }) {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedChild, setSelectedChild] = useState(null);
   const [formData, setFormData] = useState(EMPTY_FORM);
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState('');
   const [editingChildId, setEditingChildId] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [busyChildId, setBusyChildId] = useState(null);
   const [loadError, setLoadError] = useState('');
   const [failedRequest, setFailedRequest] = useState(null);
+
+  useEffect(() => () => {
+    if (imagePreview.startsWith('blob:')) URL.revokeObjectURL(imagePreview);
+  }, [imagePreview]);
 
   const requestApi = useCallback(async (path, options) => {
     const method = options?.method || 'GET';
@@ -118,6 +125,8 @@ export default function ChildrenManagement({ onShowToast }) {
   const openAddModal = () => {
     setEditingChildId(null);
     setFormData(EMPTY_FORM);
+    setImageFile(null);
+    setImagePreview(`${API_BASE_URL}/images/default-child.svg`);
     setIsFormModalOpen(true);
   };
 
@@ -131,6 +140,10 @@ export default function ChildrenManagement({ onShowToast }) {
       maLopHoc: child.maLopHoc ? String(child.maLopHoc) : '',
       trangThaiHocTap: child.trangThaiHocTap || 'Đang học',
     });
+    setImageFile(null);
+    setImagePreview(child.anhDaiDien
+      ? `${API_BASE_URL}${child.anhDaiDien}`
+      : `${API_BASE_URL}/images/default-child.svg`);
     setIsFormModalOpen(true);
   };
 
@@ -156,13 +169,29 @@ export default function ChildrenManagement({ onShowToast }) {
         response,
         editingChildId ? 'Không thể cập nhật hồ sơ trẻ.' : 'Không thể thêm hồ sơ trẻ.',
       );
+      let imageError = '';
+      if (imageFile) {
+        try {
+          const formData = new FormData();
+          formData.append('file', imageFile);
+          const imageResponse = await requestApi(`/api/tre-em/${savedChild.maTre}/anh-dai-dien`, {
+            method: 'POST',
+            headers: { 'X-XSRF-TOKEN': csrfToken },
+            body: formData,
+          });
+          await readResponse(imageResponse, 'Không thể tải ảnh đại diện trẻ.');
+        } catch (error) {
+          imageError = error.message || 'Không thể tải ảnh đại diện trẻ.';
+        }
+      }
       setIsFormModalOpen(false);
+      setImageFile(null);
       await loadData(searchQuery.trim());
-      showToast(
-        'success',
-        'Thành công',
-        `${editingChildId ? 'Đã cập nhật' : 'Đã thêm'} hồ sơ ${getFullName(savedChild)}.`,
-      );
+      showToast(imageError ? 'error' : 'success',
+        imageError ? 'Hồ sơ đã lưu nhưng ảnh chưa cập nhật' : 'Thành công',
+        imageError
+          ? `Hồ sơ ${getFullName(savedChild)} đã lưu; ${imageError}`
+          : `${editingChildId ? 'Đã cập nhật' : 'Đã thêm'} hồ sơ ${getFullName(savedChild)}.`);
     } catch (error) {
       showToast('error', 'Không thể lưu hồ sơ trẻ', error.message || 'Vui lòng thử lại.');
     } finally {
@@ -319,7 +348,17 @@ export default function ChildrenManagement({ onShowToast }) {
           {filteredChildren.map((child) => (
             <article key={child.maTre} className="child-card card-lift">
               <div className="child-card-header">
-                <div className="child-avatar"><Baby size={23} /></div>
+                <div className="child-avatar">
+                  <img
+                    src={`${API_BASE_URL}${child.anhDaiDien || `/api/tre-em/${child.maTre}/anh-dai-dien`}`}
+                    alt={`Ảnh đại diện ${getFullName(child)}`}
+                    onError={(event) => {
+                      event.currentTarget.onerror = null;
+                      event.currentTarget.src = `${API_BASE_URL}/images/default-child.svg`;
+                    }}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 'inherit' }}
+                  />
+                </div>
                 <div className="child-basic">
                   <div className="child-name-row"><h4>{getFullName(child)}</h4></div>
                   <span className="child-code">Mã trẻ: {child.maTre}</span>
@@ -417,6 +456,43 @@ export default function ChildrenManagement({ onShowToast }) {
         }
       >
         <form onSubmit={handleSaveSubmit} className="modal-form-grid">
+          <div className="form-group col-2">
+            <label htmlFor="child-avatar">Ảnh đại diện</label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <img
+                src={imagePreview || `${API_BASE_URL}/images/default-child.svg`}
+                alt="Xem trước ảnh đại diện trẻ"
+                onError={(event) => {
+                  event.currentTarget.onerror = null;
+                  event.currentTarget.src = `${API_BASE_URL}/images/default-child.svg`;
+                }}
+                style={{ width: '88px', height: '88px', objectFit: 'cover', borderRadius: '50%' }}
+              />
+              <input
+                id="child-avatar"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={(event) => {
+                  const file = event.target.files?.[0] || null;
+                  if (file && (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)
+                    || file.size > 5 * 1024 * 1024)) {
+                    showToast('error', 'Ảnh không hợp lệ', 'Chỉ nhận JPEG, PNG hoặc WebP tối đa 5 MB.');
+                    event.target.value = '';
+                    return;
+                  }
+                  setImageFile(file);
+                  setImagePreview(file
+                    ? URL.createObjectURL(file)
+                    : editingChildId
+                      ? `${API_BASE_URL}/api/tre-em/${editingChildId}/anh-dai-dien`
+                      : `${API_BASE_URL}/images/default-child.svg`);
+                  event.target.value = '';
+                }}
+              />
+            </div>
+            <small>JPEG, PNG hoặc WebP; tối đa 5 MB. Ảnh được tải lên khi lưu hồ sơ.</small>
+            {imageFile && <small>{imageFile.name} · {(imageFile.size / 1024 / 1024).toFixed(2)} MB</small>}
+          </div>
           <div className="form-group">
             <label htmlFor="child-middle-name">Họ và tên đệm *</label>
             <input
@@ -509,6 +585,15 @@ export default function ChildrenManagement({ onShowToast }) {
           <div className="detail-sections">
             <div className="detail-card">
               <h4><Baby size={16} /> Thông tin trẻ</h4>
+              <img
+                src={`${API_BASE_URL}${selectedChild.anhDaiDien || `/api/tre-em/${selectedChild.maTre}/anh-dai-dien`}`}
+                alt={`Ảnh đại diện ${getFullName(selectedChild)}`}
+                onError={(event) => {
+                  event.currentTarget.onerror = null;
+                  event.currentTarget.src = `${API_BASE_URL}/images/default-child.svg`;
+                }}
+                style={{ width: '112px', height: '112px', objectFit: 'cover', borderRadius: '50%', marginBottom: '16px' }}
+              />
               <div className="detail-grid">
                 <div><span>Mã trẻ:</span> <strong>{selectedChild.maTre}</strong></div>
                 <div><span>Họ và tên:</span> <strong>{getFullName(selectedChild)}</strong></div>

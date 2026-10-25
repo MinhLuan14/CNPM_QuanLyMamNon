@@ -5,9 +5,9 @@ import {
   LayoutDashboard,
   Wallet,
   Utensils,
-  X,
+  UserRound,
 } from 'lucide-react'
-import logoImg from '../../assets/Logo.png'
+import Sidebar from '../Sidebar'
 
 const menuItems = [
   { title: 'Tổng quan', icon: LayoutDashboard },
@@ -16,56 +16,18 @@ const menuItems = [
   { title: 'Học phí & tiền ăn', icon: Wallet },
   { title: 'Lịch sử thanh toán', icon: CreditCard },
   { title: 'Thông báo', icon: Bell },
+  { title: 'Thông tin cá nhân', icon: UserRound },
 ]
 
 export default function ParentSidebar({ active, setActive, isOpen, setIsOpen }) {
-  return (
-    <>
-      {isOpen && (
-        <button
-          className="parent-overlay"
-          aria-label="Đóng menu"
-          onClick={() => setIsOpen(false)}
-        />
-      )}
-      <aside className={`parent-sidebar ${isOpen ? 'parent-sidebar-open' : ''}`}>
-        <div className="parent-brand">
-          <img src={logoImg} alt="BabyShark" />
-          <div>
-            <strong>BabyShark</strong>
-            <span>Cổng phụ huynh</span>
-          </div>
-          <button
-            className="parent-close-menu"
-            aria-label="Đóng menu"
-            onClick={() => setIsOpen(false)}
-          >
-            <X size={20} />
-          </button>
-        </div>
-
-        <p className="parent-menu-label">DÀNH CHO GIA ĐÌNH</p>
-        <nav className="parent-menu">
-          {menuItems.map(({ title, icon: Icon }) => (
-            <button
-              key={title}
-              className={`parent-menu-item ${active === title ? 'active' : ''}`}
-              onClick={() => {
-                setActive(title)
-                setIsOpen(false)
-              }}
-            >
-              <Icon size={19} />
-              <span>{title}</span>
-            </button>
-          ))}
-        </nav>
-
-        <div className="parent-sidebar-footer">
-          <span className="parent-status-dot" />
-          BabyShark Preschool
-        </div>
-      </aside>
-    </>
-  )
+  return <Sidebar
+    active={active}
+    setActive={setActive}
+    sidebarOpen={isOpen}
+    setSidebarOpen={setIsOpen}
+    items={menuItems}
+    subtitle="Phụ huynh"
+    menuLabel="DÀNH CHO GIA ĐÌNH"
+    footerText="BabyShark Preschool"
+  />
 }

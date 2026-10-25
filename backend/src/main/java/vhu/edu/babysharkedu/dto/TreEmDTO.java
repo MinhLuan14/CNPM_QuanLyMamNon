@@ -10,5 +10,6 @@ public record TreEmDTO(
         String noiSinh,
         Integer maLopHoc,
         String tenLopHoc,
-        String trangThaiHocTap) {
+        String trangThaiHocTap,
+        String anhDaiDien) {
 }

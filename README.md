@@ -314,3 +314,197 @@ Dự án BabySharkEdu được thực hiện bởi 3 thành viên. Công việc 
 - Sử dụng Git và GitHub để quản lý mã nguồn, theo dõi thay đổi và phối hợp phát triển.
 - Kiểm thử từng module trước khi tích hợp vào hệ thống chung.
 - Cả nhóm cùng tham gia kiểm thử tổng thể, hoàn thiện tài liệu và chuẩn bị báo cáo đồ án.
+# 🦈 babySharkEdu – Hệ thống quản lý mầm non
+
+## 📋 Danh sách công việc (To-do List)
+
+### 1. Quản lý phụ huynh và trẻ em
+- [x] Quản lý hồ sơ phụ huynh
+- [x] Thêm, sửa, xóa và xem thông tin phụ huynh
+- [x] Quản lý thông tin trẻ em
+- [x] Thêm, sửa, xóa và xem thông tin trẻ em
+- [x] Liên kết phụ huynh với trẻ em
+- [x] Hiển thị danh sách trẻ em theo phụ huynh
+
+### 2. Quản lý lớp học
+- [x] Xây dựng chức năng thêm lớp học
+- [x] Xây dựng chức năng sửa thông tin lớp học
+- [x] Xây dựng chức năng xóa lớp học
+- [x] Hiển thị danh sách lớp học
+- [x] Quản lý phòng học và độ tuổi
+- [x] Thiết lập sĩ số tối đa của lớp
+- [x] Hiển thị danh sách trẻ em trong từng lớp
+- [x] Phân lớp cho trẻ em
+- [x] Kiểm tra sĩ số trước khi thêm trẻ vào lớp
+
+### 3. Quản lý giáo viên và phân công
+- [x] Xây dựng chức năng thêm giáo viên
+- [x] Xây dựng chức năng sửa thông tin giáo viên
+- [x] Xây dựng chức năng xóa giáo viên
+- [x] Hiển thị danh sách giáo viên
+- [x] Quản lý tài khoản giáo viên
+- [x] Phân công giáo viên chủ nhiệm
+- [x] Phân công giáo viên phụ trách lớp
+- [ ] Quản lý thời gian phân công
+- [ ] Kiểm tra trùng lịch và phân công
+
+### 4. Quản lý thực đơn và món ăn
+- [x] Xây dựng chức năng thêm món ăn
+- [x] Xây dựng chức năng sửa thông tin món ăn
+- [x] Xây dựng chức năng xóa món ăn
+- [x] Quản lý thành phần và loại món ăn
+- [x] Quản lý trạng thái món ăn
+- [x] Tạo thực đơn theo tuần
+- [x] Quản lý thực đơn theo ngày
+- [x] Phân chia các bữa ăn trong ngày
+- [x] Gán món ăn vào từng bữa
+- [x] Xem thực đơn theo tuần và ngày
+- [ ] Kiểm tra ngày áp dụng của thực đơn
+
+### 5. Quản lý học phí và thanh toán
+- [x] Lập phiếu học phí theo tháng cho trẻ
+- [x] Quản lý các khoản phí
+- [x] Quản lý chi tiết học phí
+- [x] Tính tổng tiền học phí
+- [x] Thiết lập hạn thanh toán
+- [ ] Theo dõi trạng thái học phí
+- [ ] Theo dõi học phí chưa thanh toán
+- [ ] Ghi nhận thanh toán
+- [ ] Quản lý phương thức thanh toán
+- [ ] Lưu mã giao dịch và thời gian thanh toán
+- [ ] Xem lịch sử thanh toán
+- [ ] Thống kê doanh thu và công nợ
+
+### 6. Hoàn thiện hệ thống
+- [x] Xây dựng chức năng đăng nhập
+- [x] Xây dựng chức năng đăng xuất
+- [x] Mã hóa mật khẩu an toàn
+- [x] Phân quyền quản trị viên
+- [x] Phân quyền giáo viên
+- [x] Phân quyền phụ huynh
+- [x] Kiểm tra và xác thực dữ liệu đầu vào
+- [x] Xử lý lỗi phía backend
+- [x] Hoàn thiện giao diện người dùng
+- [ ] Tối ưu giao diện trên máy tính và điện thoại
+- [ ] Kiểm thử các chức năng
+- [ ] Kiểm thử quan hệ và tính toàn vẹn dữ liệu
+- [ ] Kiểm thử bảo mật và phân quyền
+- [ ] Hoàn thiện tài liệu hướng dẫn sử dụng
+- [ ] Hoàn thiện README và hướng dẫn cài đặt
+- [ ] Kiểm tra cấu hình và triển khai hệ thống
+
+---
+
+## 📊 Tiến độ dự án
+
+- **Hoàn thành:** Quản lý phụ huynh và trẻ em
+- **Tiếp theo:** Quản lý lớp học
+- **Đang phát triển:** Các chức năng quản lý giáo viên, thực đơn, học phí và hoàn thiện hệ thống
+
+> Lưu ý: Đánh dấu `[x]` khi chức năng đã được triển khai và kiểm thử thành công. Các mục chưa hoàn thành giữ nguyên `[ ]`.
+
+## Hồ sơ cá nhân và hỗ trợ tài khoản
+
+Profile dùng chung cho phụ huynh và giáo viên. Các API dưới đây dùng phiên đăng nhập hiện tại (cookie session); request ghi dữ liệu cần gửi CSRF token trong header `X-XSRF-TOKEN`.
+
+### Hồ sơ cá nhân
+
+- `GET /api/profile`: lấy hồ sơ theo tài khoản đang đăng nhập; không nhận mã hồ sơ từ client.
+- `PUT /api/profile`: cập nhật số điện thoại, email và địa chỉ liên hệ được phép sửa.
+- `POST /api/auth/change-password`: đổi mật khẩu cho chính tài khoản đang đăng nhập.
+
+Ví dụ cập nhật hồ sơ:
+
+```http
+PUT /api/profile
+Content-Type: application/json
+X-XSRF-TOKEN: <csrf-token>
+```
+
+```json
+{
+  "soDienThoai": "0912345678",
+  "email": "an@example.com",
+  "diaChiLH": "Quận Bình Thạnh, TP. Hồ Chí Minh"
+}
+```
+
+Ví dụ đổi mật khẩu:
+
+```http
+POST /api/auth/change-password
+Content-Type: application/json
+X-XSRF-TOKEN: <csrf-token>
+```
+
+```json
+{
+  "matKhauHienTai": "mat-khau-hien-tai",
+  "matKhauMoi": "mat-khau-moi-an-toan",
+  "xacNhanMatKhauMoi": "mat-khau-moi-an-toan"
+}
+```
+
+Kết quả thành công: `{"message":"Đổi mật khẩu thành công."}`. Mật khẩu mới tối thiểu 8 ký tự; tài khoản bị khóa không thể đổi mật khẩu.
+
+### Hỗ trợ tài khoản
+
+- `POST /api/auth/yeu-cau-ho-tro`: gửi yêu cầu hỗ trợ, không cần đăng nhập. `loaiTaiKhoan` nhận `PHUHUYNH` hoặc `GIAOVIEN`.
+- `GET /api/yeu-cau-ho-tro`: nhân viên có quyền xem các yêu cầu.
+- `PATCH /api/yeu-cau-ho-tro/{maYeuCau}`: nhân viên cập nhật/trạng thái xác minh yêu cầu.
+- `POST /api/yeu-cau-ho-tro/{maYeuCau}/cap-lai-mat-khau`: chỉ ADMIN được cấp mật khẩu tạm cho yêu cầu đã xác minh; mật khẩu chỉ trả về một lần và response có `Cache-Control: no-store`.
+
+Ví dụ gửi yêu cầu:
+
+```json
+{
+  "hoTen": "Nguyễn Văn An",
+  "soDienThoai": "0912345678",
+  "email": "an@example.com",
+  "loaiYeuCau": "QUEN_MAT_KHAU",
+  "noiDung": "Cần hỗ trợ truy cập tài khoản",
+  "loaiTaiKhoan": "PHUHUYNH"
+}
+```
+
+Hiện dự án chưa cấu hình nhà cung cấp SMS/OTP. Gửi yêu cầu không có nghĩa là OTP đã được gửi hoặc danh tính đã được xác minh; nhân viên phải xác minh theo quy trình nội bộ trước khi ADMIN cấp lại mật khẩu. Không triển khai đặt lại mật khẩu tự động chỉ dựa trên số điện thoại.
+
+### Tự khôi phục tài khoản qua email
+
+- `POST /api/auth/forgot-username`: gửi tên đăng nhập đến email hồ sơ đã đăng ký.
+- `POST /api/auth/forgot-password`: gửi mật khẩu tạm thời đến email hồ sơ đã đăng ký.
+- Đăng nhập bằng mật khẩu tạm thời sẽ yêu cầu đổi mật khẩu ngay. Cho đến khi đổi thành công, người dùng chỉ được kiểm tra phiên, đổi mật khẩu hoặc đăng xuất.
+- Endpoint đặt lại mật khẩu qua token cũ đã ngừng hoạt động; các bảng khôi phục hiện hữu vẫn được giữ nguyên.
+
+Các endpoint trả cùng thông báo trung lập cho email có hoặc không có tài khoản để hạn chế dò tài khoản; phản hồi không xác nhận rằng email đã gửi thành công. Khi SMTP lỗi, mật khẩu trong database không bị thay đổi. Mật khẩu tạm thời chỉ được giữ trong bộ nhớ trong lúc gửi và được lưu bằng BCrypt sau khi gửi thành công; không ghi mật khẩu vào log. Yêu cầu bị giới hạn tối đa 5 lần/giờ theo email và 10 lần/giờ theo IP.
+
+Trước khi sử dụng, cấu hình các biến môi trường backend:
+
+| Biến | Mô tả |
+|---|---|
+| `DB_USERNAME` / `DB_PASSWORD` | Tài khoản kết nối SQL Server; mật khẩu không được lưu trong source |
+| `VIETQR_CLIENT_ID` / `VIETQR_API_KEY` | Thông tin xác thực VietQR chỉ dùng ở backend |
+| `MB_ACCOUNT_NO` / `MB_ACCOUNT_NAME` | Tài khoản nhận tiền dùng để tạo QR VietQR |
+| `MAIL_HOST` | Máy chủ SMTP |
+| `MAIL_PORT` | Cổng SMTP, mặc định `587` |
+| `MAIL_USERNAME` / `MAIL_PASSWORD` | Tài khoản SMTP và mật khẩu ứng dụng |
+| `MAIL_FROM` | Địa chỉ người gửi được SMTP cho phép |
+| `ACCOUNT_RECOVERY_HASH_SECRET` | Bí mật ngẫu nhiên riêng, tối thiểu 32 ký tự, dùng HMAC để lưu mã định danh rate limit |
+
+Không đưa mật khẩu SMTP hoặc HMAC secret vào Git. Với nhà cung cấp yêu cầu xác thực hai bước, dùng app password và đặt cùng bí mật trong secret store của môi trường triển khai; biến môi trường phải được cấp cho đúng tiến trình backend trước khi khởi động lại. Nếu thiếu cấu hình, backend vẫn khởi động nhưng endpoint khôi phục trả lỗi dịch vụ chưa sẵn sàng; log chẩn đoán chỉ ghi trạng thái cấu hình có/thiếu, không ghi giá trị.
+
+Nếu `/api/auth/forgot-password` trả HTTP 503 với thông báo “Không thể tiếp nhận yêu cầu lúc này”, backend đã từ chối trước bước tra cứu tài khoản hoặc gửi email vì SQL Server không cấp được application lock cho rate limit. Log backend ghi `resultCode`/`resultMeaning` khi SQL Server trả mã âm (ví dụ timeout), hoặc `sqlState`/`vendorCode` khi câu lệnh lỗi; các giá trị email, IP, hash khóa, token và thông tin xác thực không được ghi. Mã khóa được cấp là `0` hoặc `1`.
+
+`sp_getapplock` với `LockOwner='Transaction'` yêu cầu transaction vật lý đang mở trên SQL Server. Hibernate/JPA có thể đã mở transaction ở Spring nhưng chưa bắt đầu transaction SQL khi lệnh khóa là thao tác JDBC đầu tiên; khi đó `@@TRANCOUNT=0` và SQL Server trả `-999`. Rate limiter dùng khóa theo `Session` thay thế, giữ khóa đến callback hoàn tất transaction (commit hoặc rollback), rồi gọi `sp_releaseapplock` trên cùng connection. Như vậy request đồng thời vẫn được tuần tự hóa qua phần kiểm tra và ghi lượt yêu cầu; timeout vẫn bị từ chối thay vì bỏ qua rate limit.
+
+Tạo các bảng bổ sung bằng cách kiểm tra và áp dụng `database/migrations/20261025_account_recovery.sql` trên đúng database SQL Server. Migration chỉ tạo bảng token và bảng giới hạn yêu cầu còn thiếu; không sửa các bảng nghiệp vụ hiện tại và không tự chạy khi ứng dụng khởi động.
+
+Trước khi bật mật khẩu tạm thời, áp dụng `database/migrations/20261025_taikhoan_must_change_password.sql` để thêm cột `mustChangePassword` có mặc định `0`. Migration này bảo toàn dữ liệu hiện tại; các tài khoản/mật khẩu tạm thời mới được đánh dấu bắt buộc đổi.
+
+### Database
+
+Để hỗ trợ yêu cầu tài khoản giáo viên, áp dụng `database/migrations/20261023_support_teacher_account.sql` sau `database/migrations/20261023_parent_account_support.sql` trên đúng database `QLMamNon`. Migration phụ huynh tạo bảng yêu cầu hỗ trợ; migration giáo viên thêm quan hệ hồ sơ giáo viên và loại tài khoản vào bảng đó.
+
+Profile giáo viên cần hai cột `ngaySinh` và `trinhDoChuyenMon`; script schema gốc chưa khai báo chúng. Nếu database chưa có, áp dụng `database/migrations/20261023_giaovien_profile_fields.sql`. Luồng tạo hồ sơ phụ huynh hiện hỗ trợ hồ sơ chưa có tài khoản; nếu `dbo.PHUHUYNH.maTaiKhoan` đang `NOT NULL`, cần sao lưu và áp dụng `database/migrations/20261023_phuhuynh_taikhoan_nullable.sql`. Migration giữ khóa ngoại tài khoản và duy nhất có lọc cho các giá trị khác `NULL`; nó không xóa dữ liệu hồ sơ.
+
+Kiểm tra schema và sao lưu database trước khi chạy migration; các migration không tự chạy khi ứng dụng khởi động và chưa được chạy trên SQL Server trong lần triển khai này.

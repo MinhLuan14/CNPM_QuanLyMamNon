@@ -1,6 +1,6 @@
 import { Bell } from 'lucide-react'
 
-export default function ParentNotifications({ notifications }) {
+export default function ParentNotifications({ notifications, isAvailable = true }) {
   return (
     <div className="parent-page">
       <div className="parent-page-intro">
@@ -9,7 +9,9 @@ export default function ParentNotifications({ notifications }) {
         <p>Các thông tin nhà trường gửi đến phụ huynh.</p>
       </div>
       <section className="parent-panel parent-history-panel">
-        {notifications.length ? (
+        {!isAvailable ? (
+          <div className="parent-empty-large"><Bell size={28} /><h3>Chưa có nguồn thông báo</h3><p>Hệ thống hiện chưa cung cấp API thông báo cho phụ huynh.</p></div>
+        ) : notifications.length ? (
           <div className="parent-notice-list">
             {notifications.map((notice) => (
               <article className="parent-notice-item" key={notice.id}>

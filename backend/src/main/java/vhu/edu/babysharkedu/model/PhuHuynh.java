@@ -40,6 +40,6 @@ public class PhuHuynh {
     private String email;
 
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "maTaiKhoan", nullable = false, unique = true)
+    @JoinColumn(name = "maTaiKhoan", nullable = true, unique = true)
     private TaiKhoan taiKhoan;
 }

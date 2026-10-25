@@ -13,10 +13,12 @@ import vhu.edu.babysharkedu.service.TaiKhoanService;
 public class TaiKhoanPrincipal implements UserDetails {
     private final TaiKhoan taiKhoan;
     private final String vaiTro;
+    private boolean mustChangePassword;
 
     public TaiKhoanPrincipal(TaiKhoan taiKhoan, TaiKhoanService taiKhoanService) {
         this.taiKhoan = taiKhoan;
         this.vaiTro = taiKhoanService.chuanHoaVaiTro(taiKhoan.getVaiTro());
+        this.mustChangePassword = Boolean.TRUE.equals(taiKhoan.getMustChangePassword());
     }
 
     public Integer getMaTaiKhoan() {
@@ -25,6 +27,14 @@ public class TaiKhoanPrincipal implements UserDetails {
 
     public String getVaiTro() {
         return vaiTro;
+    }
+
+    public boolean isMustChangePassword() {
+        return mustChangePassword;
+    }
+
+    public void setMustChangePassword(boolean mustChangePassword) {
+        this.mustChangePassword = mustChangePassword;
     }
 
     @Override

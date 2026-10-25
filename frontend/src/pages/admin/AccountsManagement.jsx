@@ -1,89 +1,158 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  AlertCircle,
   ShieldCheck,
   Plus,
   Search,
   Key,
+  Copy,
   CheckCircle2,
   UserX,
-  Sparkles
+  Sparkles,
+  RefreshCw,
 } from 'lucide-react';
-import { initialAccounts } from '../../data/mockData';
+import { authRequest, fetchCsrfToken, responseError } from '../../api/auth';
 import Modal from '../../components/Modal';
 
-export default function AccountsManagement({ onShowToast }) {
-  const [accounts, setAccounts] = useState(initialAccounts);
+const ROLE_LABELS = {
+  ADMIN: 'QTV',
+  GIAOVIEN: 'Giáo viên',
+  PHUHUYNH: 'Phụ huynh',
+  KETOAN: 'Kế toán & Thu ngân',
+};
+
+export default function AccountsManagement({ onShowToast, onNavigate }) {
+  const [accounts, setAccounts] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('ALL');
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [statusFilter, setStatusFilter] = useState('ALL');
   const [activeTab, setActiveTab] = useState('users'); // 'users' | 'roles'
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [busyAccountId, setBusyAccountId] = useState(null);
+  const [temporaryCredential, setTemporaryCredential] = useState(null);
 
-  // New account form
-  const [newAcc, setNewAcc] = useState({
-    username: '',
-    fullName: '',
-    email: '',
-    role: 'GIAO_VIEN',
-    password: ''
-  });
+  const showToast = (type, title, message) => {
+    onShowToast?.({ type, title, message });
+  };
 
-  const filteredAccounts = accounts.filter((acc) => {
-    const matchesSearch =
-      acc.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      acc.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      acc.email.toLowerCase().includes(searchQuery.toLowerCase());
+  const loadAccounts = useCallback(async () => {
+    setIsLoading(true);
+    setLoadError('');
+    try {
+      const response = await authRequest('/api/tai-khoan');
+      if (!response.ok) {
+        throw new Error(await responseError(response, 'Không thể tải danh sách tài khoản.'));
+      }
+      const data = await response.json();
+      if (!Array.isArray(data)) {
+        throw new Error('Dữ liệu danh sách tài khoản từ máy chủ không hợp lệ.');
+      }
+      setAccounts(data.map((account) => ({
+        id: account.maTaiKhoan,
+        username: account.tenDangNhap || '',
+        fullName: account.hoTenChuTaiKhoan || 'Chưa liên kết hồ sơ',
+        email: account.email || '—',
+        role: account.vaiTro || 'KHAC',
+        roleName: ROLE_LABELS[account.vaiTro] || account.vaiTro || 'Chưa xác định',
+        status: account.trangThai === true,
+        lastLogin: account.lanDangNhapGanNhat
+          ? new Date(account.lanDangNhapGanNhat).toLocaleString('vi-VN')
+          : 'Chưa có dữ liệu',
+      })));
+    } catch (error) {
+      setLoadError(error.message || 'Không thể kết nối tới máy chủ.');
+      setAccounts([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(loadAccounts, 0);
+    return () => window.clearTimeout(timeoutId);
+  }, [loadAccounts]);
+
+  const filteredAccounts = useMemo(() => accounts.filter((acc) => {
+    const query = searchQuery.trim().toLocaleLowerCase('vi');
+    const matchesSearch = [acc.username, acc.fullName, acc.email]
+      .some((value) => value.toLocaleLowerCase('vi').includes(query));
     const matchesRole = roleFilter === 'ALL' || acc.role === roleFilter;
-    return matchesSearch && matchesRole;
-  });
+    const matchesStatus = statusFilter === 'ALL'
+      || (statusFilter === 'ACTIVE' ? acc.status : !acc.status);
+    return matchesSearch && matchesRole && matchesStatus;
+  }), [accounts, roleFilter, searchQuery, statusFilter]);
 
-  const handleAddSubmit = (e) => {
-    e.preventDefault();
-    if (!newAcc.username || !newAcc.fullName || !newAcc.password) {
-      alert('Vui lòng điền đầy đủ thông tin bắt buộc (*)!');
+  const handleToggleStatus = async (acc) => {
+    const nextStatus = !acc.status;
+    const statusLabel = nextStatus ? 'mở khóa' : 'khóa';
+    if (!window.confirm(`Bạn có chắc chắn muốn ${statusLabel} tài khoản "${acc.username}"?`)) {
       return;
     }
-
-    const roleMap = {
-      ADMIN: 'Quản trị viên cấp cao',
-      GIAO_VIEN: 'Giáo viên',
-      PHU_HUYNH: 'Phụ huynh',
-      KETOAN: 'Kế toán & Thu ngân'
-    };
-
-    const newId = `TK00${accounts.length + 1}`;
-    const accountToAdd = {
-      id: newId,
-      username: newAcc.username,
-      fullName: newAcc.fullName,
-      email: newAcc.email || `${newAcc.username}@babyshark.edu.vn`,
-      role: newAcc.role,
-      roleName: roleMap[newAcc.role],
-      status: 'Hoạt động',
-      lastLogin: 'Chưa đăng nhập'
-    };
-
-    setAccounts([accountToAdd, ...accounts]);
-    setIsAddModalOpen(false);
-    if (onShowToast) {
-      onShowToast({
-        type: 'success',
-        title: 'Thành công',
-        message: `Đã cấp tài khoản "${newAcc.username}" (${roleMap[newAcc.role]}) thành công!`
-      });
+    setBusyAccountId(acc.id);
+    try {
+      const csrfToken = await fetchCsrfToken();
+      const response = await authRequest(
+        `/api/accounts/${acc.id}/${nextStatus ? 'unlock' : 'lock'}`,
+        { method: 'POST', headers: { 'X-XSRF-TOKEN': csrfToken } },
+      );
+      if (!response.ok) {
+        throw new Error(await responseError(response, `Không thể ${statusLabel} tài khoản.`));
+      }
+      await loadAccounts();
+      showToast('success', 'Đã cập nhật trạng thái', `Đã ${statusLabel} tài khoản "${acc.username}".`);
+    } catch (error) {
+      showToast('error', 'Không thể cập nhật tài khoản', error.message || 'Vui lòng thử lại.');
+    } finally {
+      setBusyAccountId(null);
     }
   };
 
-  const handleToggleStatus = (acc) => {
-    const newStatus = acc.status === 'Hoạt động' ? 'Đã khóa' : 'Hoạt động';
-    setAccounts(
-      accounts.map((item) => (item.id === acc.id ? { ...item, status: newStatus } : item))
-    );
-    if (onShowToast) {
-      onShowToast({
-        type: newStatus === 'Hoạt động' ? 'success' : 'info',
-        title: 'Cập nhật trạng thái',
-        message: `Đã chuyển tài khoản "${acc.username}" sang trạng thái: ${newStatus}.`
+  const handleResetPassword = async (acc) => {
+    if (!window.confirm(
+      `Cấp mật khẩu tạm mới cho tài khoản "${acc.username}"? Mật khẩu hiện tại sẽ mất hiệu lực.${acc.status ? '' : ' Tài khoản vẫn giữ trạng thái đã khóa.'}`,
+    )) {
+      return;
+    }
+
+    setBusyAccountId(acc.id);
+    try {
+      const csrfToken = await fetchCsrfToken();
+      const response = await authRequest(
+        `/api/tai-khoan/${acc.id}/cap-lai-mat-khau`,
+        { method: 'POST', headers: { 'X-XSRF-TOKEN': csrfToken } },
+      );
+      if (!response.ok) {
+        throw new Error(await responseError(response, 'Không thể cấp lại mật khẩu.'));
+      }
+      const credential = await response.json();
+      setTemporaryCredential({
+        ...credential,
+        hoTen: acc.fullName,
+        vaiTro: acc.roleName,
       });
+      showToast('success', 'Đã cấp mật khẩu tạm', `Mật khẩu mới cho "${acc.username}" chỉ hiển thị lần này.`);
+    } catch (error) {
+      showToast('error', 'Không thể cấp lại mật khẩu', error.message || 'Vui lòng thử lại.');
+    } finally {
+      setBusyAccountId(null);
+    }
+  };
+
+  const copyCredential = async (value, label) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      showToast('success', 'Đã sao chép', `Đã sao chép ${label}.`);
+    } catch {
+      showToast('error', 'Không thể sao chép', 'Trình duyệt không cho phép sao chép nội dung này.');
+    }
+  };
+
+  const goToParentAccountProvisioning = () => {
+    if (onNavigate) {
+      onNavigate('Quản lý phụ huynh');
+    } else {
+      showToast('info', 'Cấp tài khoản', 'Tạo và cấp tài khoản phụ huynh trong màn hình Quản lý phụ huynh.');
     }
   };
 
@@ -98,8 +167,8 @@ export default function AccountsManagement({ onShowToast }) {
           <p>Cấp phát tài khoản, kiểm soát quyền truy cập của Quản trị viên, Giáo viên, Phụ huynh và Kế toán</p>
         </div>
 
-        <button className="btn-primary" onClick={() => setIsAddModalOpen(true)}>
-          <Plus size={18} /> Cấp tài khoản mới
+        <button className="btn-primary" onClick={goToParentAccountProvisioning}>
+          <Plus size={18} /> Cấp tài khoản phụ huynh
         </button>
       </div>
 
@@ -134,19 +203,28 @@ export default function AccountsManagement({ onShowToast }) {
               <span className="dot-indicator bg-green" />
               <div>
                 <span className="mini-label">Đang hoạt động bình thường</span>
-                <strong>{accounts.filter((a) => a.status === 'Hoạt động').length} tài khoản</strong>
+                <strong>{accounts.filter((a) => a.status).length} tài khoản</strong>
               </div>
             </div>
             <div className="mini-stat-card">
               <span className="dot-indicator bg-purple" />
               <div>
                 <span className="mini-label">Bảo mật mật khẩu</span>
-                <strong>Mã hóa chuẩn BCrypt SHA-256</strong>
+                <strong>Mã hóa BCrypt</strong>
               </div>
             </div>
           </div>
 
           {/* Lọc & Tìm Kiếm */}
+          {loadError && (
+            <div className="empty-state-hint" role="alert">
+              <AlertCircle size={16} /> {loadError}
+              <button className="btn-secondary" onClick={loadAccounts} disabled={isLoading}>
+                <RefreshCw size={15} /> Tải lại
+              </button>
+            </div>
+          )}
+
           <div className="filter-bar">
             <div className="search-input-wrap">
               <Search size={18} className="search-icon" />
@@ -165,9 +243,18 @@ export default function AccountsManagement({ onShowToast }) {
               >
                 <option value="ALL">Tất cả vai trò</option>
                 <option value="ADMIN">Quản trị viên (ADMIN)</option>
-                <option value="GIAO_VIEN">Giáo viên (GIAO_VIEN)</option>
-                <option value="PHU_HUYNH">Phụ huynh (PHU_HUYNH)</option>
+                <option value="GIAOVIEN">Giáo viên (GIAOVIEN)</option>
+                <option value="PHUHUYNH">Phụ huynh (PHUHUYNH)</option>
                 <option value="KETOAN">Kế toán (KETOAN)</option>
+              </select>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                aria-label="Lọc theo trạng thái tài khoản"
+              >
+                <option value="ALL">Tất cả trạng thái</option>
+                <option value="ACTIVE">Đang hoạt động</option>
+                <option value="LOCKED">Đã khóa</option>
               </select>
             </div>
           </div>
@@ -188,7 +275,15 @@ export default function AccountsManagement({ onShowToast }) {
                 </tr>
               </thead>
               <tbody>
-                {filteredAccounts.map((acc) => (
+                {isLoading ? (
+                  <tr><td colSpan="8">Đang tải tài khoản từ máy chủ...</td></tr>
+                ) : loadError ? (
+                  <tr><td colSpan="8">Không thể hiển thị dữ liệu tài khoản.</td></tr>
+                ) : accounts.length === 0 ? (
+                  <tr><td colSpan="8">Database chưa có tài khoản nào.</td></tr>
+                ) : filteredAccounts.length === 0 ? (
+                  <tr><td colSpan="8">Không tìm thấy tài khoản phù hợp với bộ lọc.</td></tr>
+                ) : filteredAccounts.map((acc) => (
                   <tr key={acc.id}>
                     <td><strong>{acc.id}</strong></td>
                     <td>
@@ -198,15 +293,14 @@ export default function AccountsManagement({ onShowToast }) {
                     <td>{acc.email}</td>
                     <td>
                       <span
-                        className={`role-tag ${
-                          acc.role === 'ADMIN'
+                        className={`role-tag ${acc.role === 'ADMIN'
                             ? 'role-admin'
-                            : acc.role === 'GIAO_VIEN'
-                            ? 'role-teacher'
-                            : acc.role === 'KETOAN'
-                            ? 'role-accountant'
-                            : 'role-parent'
-                        }`}
+                            : acc.role === 'GIAOVIEN'
+                              ? 'role-teacher'
+                              : acc.role === 'KETOAN'
+                                ? 'role-accountant'
+                                : 'role-parent'
+                          }`}
                       >
                         {acc.roleName}
                       </span>
@@ -214,30 +308,35 @@ export default function AccountsManagement({ onShowToast }) {
                     <td>{acc.lastLogin}</td>
                     <td>
                       <span
-                        className={`status-pill ${
-                          acc.status === 'Hoạt động' ? 'pill-green' : 'pill-red'
-                        }`}
+                        className={`status-pill ${acc.status ? 'pill-green' : 'pill-red'
+                          }`}
                       >
-                        {acc.status}
+                        {acc.status ? 'Đang hoạt động' : 'Đã khóa'}
                       </span>
                     </td>
                     <td>
                       <div className="action-buttons-cell">
                         <button
                           className="btn-tbl view"
-                          title="Đổi mật khẩu"
-                          onClick={() =>
-                            alert(`Đặt lại mật khẩu cho tài khoản "${acc.username}"`)
-                          }
+                          title="Cấp lại mật khẩu tạm thời"
+                          aria-label={`Cấp lại mật khẩu cho ${acc.username}`}
+                          disabled={busyAccountId === acc.id}
+                          onClick={() => handleResetPassword(acc)}
                         >
-                          <Key size={14} />
+                          {busyAccountId === acc.id
+                            ? <RefreshCw size={14} className="spin" />
+                            : <Key size={14} />}
                         </button>
                         <button
-                          className={`btn-tbl ${acc.status === 'Hoạt động' ? 'delete' : 'pay'}`}
-                          title={acc.status === 'Hoạt động' ? 'Khóa tài khoản' : 'Mở khóa'}
+                          className={`btn-tbl ${acc.status ? 'delete' : 'pay'}`}
+                          title={acc.status ? 'Khóa tài khoản' : 'Mở khóa'}
+                          aria-label={`${acc.status ? 'Khóa' : 'Mở khóa'} tài khoản ${acc.username}`}
+                          disabled={busyAccountId === acc.id}
                           onClick={() => handleToggleStatus(acc)}
                         >
-                          {acc.status === 'Hoạt động' ? <UserX size={14} /> : <CheckCircle2 size={14} />}
+                          {busyAccountId === acc.id
+                            ? <RefreshCw size={14} className="spin" />
+                            : acc.status ? <UserX size={14} /> : <CheckCircle2 size={14} />}
                         </button>
                       </div>
                     </td>
@@ -264,9 +363,9 @@ export default function AccountsManagement({ onShowToast }) {
               <tr>
                 <th>Phân hệ chức năng</th>
                 <th>Quản trị viên (ADMIN)</th>
-                <th>Giáo viên (GIAO_VIEN)</th>
+                <th>Giáo viên (GIAOVIEN)</th>
                 <th>Kế toán (KETOAN)</th>
-                <th>Phụ huynh (PHU_HUYNH)</th>
+                <th>Phụ huynh (PHUHUYNH)</th>
               </tr>
             </thead>
             <tbody>
@@ -310,80 +409,61 @@ export default function AccountsManagement({ onShowToast }) {
         </div>
       )}
 
-      {/* Modal Cấp Tài Khoản Mới */}
       <Modal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        title="Cấp Phát Tài Khoản Người Dùng Mới"
-        maxWidth="550px"
-        footer={
+        isOpen={Boolean(temporaryCredential)}
+        onClose={() => setTemporaryCredential(null)}
+        title="Mật khẩu tạm thời — chỉ hiển thị một lần"
+        maxWidth="540px"
+        footer={(
           <div className="modal-buttons">
-            <button className="btn-secondary" onClick={() => setIsAddModalOpen(false)}>
-              Hủy
-            </button>
-            <button className="btn-primary" onClick={handleAddSubmit}>
-              <CheckCircle2 size={16} /> Cấp tài khoản
-            </button>
+            {temporaryCredential && (
+              <button
+                className="btn-secondary"
+                onClick={() => copyCredential(
+                  `Tài khoản: ${temporaryCredential.hoTen}\nTên đăng nhập: ${temporaryCredential.tenDangNhap}\nMật khẩu tạm thời: ${temporaryCredential.matKhauTamThoi}`,
+                  'thông tin bàn giao',
+                )}
+              >
+                <Copy size={15} /> Sao chép thông tin bàn giao
+              </button>
+            )}
+            <button className="btn-primary" onClick={() => setTemporaryCredential(null)}>Đóng</button>
           </div>
-        }
+        )}
       >
-        <form onSubmit={handleAddSubmit} className="modal-form-grid">
-          <div className="form-group col-2">
-            <label>Tên đăng nhập (Username) *</label>
-            <input
-              type="text"
-              placeholder="VD: gv_thuytrang"
-              value={newAcc.username}
-              onChange={(e) => setNewAcc({ ...newAcc, username: e.target.value })}
-              required
-            />
+        {temporaryCredential && (
+          <div className="modal-form-grid">
+            <p className="col-full"><strong>Tài khoản:</strong> {temporaryCredential.hoTen}</p>
+            <p className="col-full"><strong>Vai trò:</strong> {temporaryCredential.vaiTro}</p>
+            <div className="form-group col-full">
+              <label>Tên đăng nhập</label>
+              <div className="credential-copy-row">
+                <input value={temporaryCredential.tenDangNhap} readOnly />
+                <button
+                  className="btn-secondary"
+                  onClick={() => copyCredential(temporaryCredential.tenDangNhap, 'tên đăng nhập')}
+                >
+                  Sao chép tên đăng nhập
+                </button>
+              </div>
+            </div>
+            <div className="form-group col-full">
+              <label>Mật khẩu tạm thời</label>
+              <div className="credential-copy-row">
+                <input value={temporaryCredential.matKhauTamThoi} readOnly />
+                <button
+                  className="btn-secondary"
+                  onClick={() => copyCredential(temporaryCredential.matKhauTamThoi, 'mật khẩu tạm thời')}
+                >
+                  Sao chép mật khẩu
+                </button>
+              </div>
+            </div>
+            <p className="col-full" role="alert">
+              Mật khẩu tạm thời chỉ hiển thị một lần. Hãy bàn giao an toàn; mật khẩu cũ đã mất hiệu lực.
+            </p>
           </div>
-
-          <div className="form-group col-2">
-            <label>Họ và Tên người dùng *</label>
-            <input
-              type="text"
-              placeholder="VD: Đặng Thùy Trang"
-              value={newAcc.fullName}
-              onChange={(e) => setNewAcc({ ...newAcc, fullName: e.target.value })}
-              required
-            />
-          </div>
-
-          <div className="form-group col-2">
-            <label>Email liên hệ</label>
-            <input
-              type="email"
-              placeholder="thuytrang@babyshark.edu.vn"
-              value={newAcc.email}
-              onChange={(e) => setNewAcc({ ...newAcc, email: e.target.value })}
-            />
-          </div>
-
-          <div className="form-group">
-            <label>Vai trò hệ thống *</label>
-            <select
-              value={newAcc.role}
-              onChange={(e) => setNewAcc({ ...newAcc, role: e.target.value })}
-            >
-              <option value="GIAO_VIEN">Giáo viên</option>
-              <option value="PHU_HUYNH">Phụ huynh</option>
-              <option value="KETOAN">Kế toán & Thu ngân</option>
-              <option value="ADMIN">Quản trị viên (ADMIN)</option>
-            </select>
-          </div>
-
-          <div className="form-group">
-            <label>Mật khẩu khởi tạo *</label>
-            <input
-              type="password"
-              placeholder="Nhập mật khẩu..."
-              value={newAcc.password}
-              onChange={(e) => setNewAcc({ ...newAcc, password: e.target.value })}
-              required
-            />
-          </div>
-        </form>
+        )}
       </Modal>
     </div>
   );

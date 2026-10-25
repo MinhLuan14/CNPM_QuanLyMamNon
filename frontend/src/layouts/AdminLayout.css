@@ -671,6 +671,16 @@
   gap: 6px;
 }
 
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin: 22px 0;
+  color: #64748b;
+  font-size: 13px;
+}
+
 /* --- CLASS MANAGEMENT STYLES --- */
 .grade-tabs {
   display: flex;
@@ -2201,6 +2211,51 @@
   gap: 3px;
 }
 
+.parent-linked-children {
+  display: grid;
+  gap: 10px;
+}
+
+.parent-linked-child {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.parent-linked-child>div:first-child {
+  display: grid;
+  gap: 4px;
+}
+
+.parent-linked-child>div:first-child span {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.parent-link-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.parent-link-actions select {
+  min-width: 150px;
+  padding: 8px 10px;
+  border: 1px solid #d6e1e9;
+  border-radius: 8px;
+  background: white;
+}
+
+.parent-link-actions button {
+  white-space: nowrap;
+}
+
 .custom-table select:focus-visible {
   outline: 3px solid rgba(22, 119, 255, 0.25);
   border-color: #1677ff;
@@ -2260,4 +2315,75 @@
     min-height: 0;
     height: auto;
   }
+}
+
+.app-shell-nutrition .main-area {
+  background: #f5f8fc;
+}
+
+.app-shell-nutrition .sidebar {
+  width: 260px;
+  background: #087de1;
+  border-right: 0;
+  box-shadow: none;
+}
+
+.app-shell-nutrition .brand {
+  min-height: 116px;
+  margin-bottom: 14px;
+  padding-top: 16px;
+  padding-bottom: 16px;
+  background: #076fc9;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.app-shell-nutrition .brand::before,
+.app-shell-nutrition .brand::after {
+  display: none;
+}
+
+.app-shell-nutrition .brand-logo {
+  width: 52px;
+  height: 52px;
+  border-radius: 10px;
+  box-shadow: none;
+}
+
+.app-shell-nutrition .brand h2 {
+  margin-bottom: 3px;
+  color: #fff;
+  font-size: 20px;
+  text-shadow: none;
+}
+
+.app-shell-nutrition .brand span {
+  max-width: none;
+  color: #d8edff;
+  font-size: 10px;
+}
+
+.app-shell-nutrition .sidebar-menu {
+  gap: 4px;
+}
+
+.app-shell-nutrition .sidebar .menu-item {
+  min-height: 42px;
+  padding: 10px 12px;
+  border-radius: 7px;
+  color: #e2f1ff;
+}
+
+.app-shell-nutrition .sidebar .menu-item:hover {
+  color: #fff;
+  background: #ffffff1c;
+}
+
+.app-shell-nutrition .sidebar .menu-item.active {
+  color: #075fae;
+  background: #fff;
+}
+
+.app-shell-nutrition .sidebar-version {
+  color: #d1e8ff;
 }
