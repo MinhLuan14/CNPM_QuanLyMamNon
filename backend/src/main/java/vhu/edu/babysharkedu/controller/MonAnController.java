@@ -23,7 +23,6 @@ import vhu.edu.babysharkedu.service.MonAnService;
 
 @RestController
 @RequestMapping("/api/mon-an")
-@PreAuthorize("hasRole('ADMIN')")
 public class MonAnController {
     private final MonAnService monAnService;
 
@@ -32,6 +31,7 @@ public class MonAnController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'GIAOVIEN', 'PHUHUYNH')")
     public List<MonAnDTO> layTatCa(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String loaiMon,
@@ -40,28 +40,33 @@ public class MonAnController {
     }
 
     @GetMapping("/{maMonAn}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'GIAOVIEN', 'PHUHUYNH')")
     public MonAnDTO layChiTiet(@PathVariable Integer maMonAn) {
         return monAnService.layChiTiet(maMonAn);
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     @ResponseStatus(HttpStatus.CREATED)
     public MonAnDTO them(@RequestBody MonAnRequest request) {
         return monAnService.them(request);
     }
 
     @PutMapping("/{maMonAn}")
+    @PreAuthorize("hasRole('ADMIN')")
     public MonAnDTO capNhat(@PathVariable Integer maMonAn, @RequestBody MonAnRequest request) {
         return monAnService.capNhat(maMonAn, request);
     }
 
     @DeleteMapping("/{maMonAn}")
+    @PreAuthorize("hasRole('ADMIN')")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void xoa(@PathVariable Integer maMonAn) {
         monAnService.xoa(maMonAn);
     }
 
     @PatchMapping("/{maMonAn}/trang-thai")
+    @PreAuthorize("hasRole('ADMIN')")
     public MonAnDTO capNhatTrangThai(
             @PathVariable Integer maMonAn,
             @RequestBody CapNhatTrangThaiMonAnRequest request) {
