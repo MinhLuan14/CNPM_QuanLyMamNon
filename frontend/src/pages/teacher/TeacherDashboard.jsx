@@ -17,7 +17,7 @@ export default function TeacherDashboard({ data, onNavigate }) {
     month: 'long',
   })
   const openTasks = data.availability.tasks ? tasks.filter((task) => task.status !== 'Đã hoàn thành').length : null
-  const todayMenu = menu[0]
+  const todayMenu = menu.find((item) => item.day && today.toLowerCase().includes(item.day.toLowerCase())) || menu[0]
 
   return (
     <div className="teacher-page">
