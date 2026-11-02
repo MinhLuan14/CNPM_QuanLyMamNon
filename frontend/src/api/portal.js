@@ -264,9 +264,9 @@ export async function loadTeacherPortalData() {
         birthplace: child.noiSinh || 'TP. Hồ Chí Minh',
         status: child.trangThaiHocTap || 'Đang học',
         className: classroom.tenLopHoc,
-        parentName: '',
-        parentRelationship: '',
-        parentPhone: '',
+        parentName: child.tenPhuHuynh || '',
+        parentRelationship: child.quanHePhuHuynh || '',
+        parentPhone: child.soDienThoaiPhuHuynh || '',
     })));
 
     return {

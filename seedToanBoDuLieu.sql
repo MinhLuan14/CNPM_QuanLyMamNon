@@ -227,3 +227,90 @@ BEGIN
     SELECT '2026-10-30 14:30:00', N'Bữa phụ chiều', 7000, N'Uống bổ dưỡng', @maThucDon, maMonAn FROM dbo.MONAN WHERE tenMonAn = N'Sữa đậu nành mè đen';
 END;
 GO
+
+-- ---------------------------------------------------------------------
+-- 5. TẠO THÔNG TIN PHỤ HUYNH VÀ LIÊN KẾT VỚI 25 TRẺ EM (PHUHUYNH & PHUHUYNH_TRE)
+-- ---------------------------------------------------------------------
+SET QUOTED_IDENTIFIER ON;
+GO
+
+IF EXISTS (SELECT 1 FROM sys.key_constraints WHERE name = 'UQ_PHUHUYNH_MATAIKHOAN')
+BEGIN
+    ALTER TABLE dbo.PHUHUYNH DROP CONSTRAINT UQ_PHUHUYNH_MATAIKHOAN;
+END;
+GO
+
+IF EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID(N'dbo.PHUHUYNH') AND name = N'maTaiKhoan' AND is_nullable = 0)
+BEGIN
+    ALTER TABLE dbo.PHUHUYNH ALTER COLUMN maTaiKhoan INT NULL;
+END;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'UX_PHUHUYNH_MATAIKHOAN')
+BEGIN
+    CREATE UNIQUE INDEX UX_PHUHUYNH_MATAIKHOAN ON dbo.PHUHUYNH(maTaiKhoan) WHERE maTaiKhoan IS NOT NULL;
+END;
+GO
+
+IF (SELECT COUNT(*) FROM dbo.PHUHUYNH) < 25
+BEGIN
+    DELETE FROM dbo.PHUHUYNH_TRE;
+    DELETE FROM dbo.PHUHUYNH;
+
+    INSERT INTO dbo.PHUHUYNH (hoTenDemPH, tenPH, diaChiLH, soDienThoai, email, maTaiKhoan)
+    VALUES
+    (N'Trần Văn', N'Hùng', N'123 Lê Lợi, P. Bến Nghé, Quận 1, TP. HCM', '0901234501', 'tranhung@gmail.com', NULL),
+    (N'Nguyễn Thị', N'Thu', N'45 Hai Bà Trưng, P. 6, Quận 3, TP. HCM', '0901234502', 'nguyenthu@gmail.com', NULL),
+    (N'Lê Văn', N'Nam', N'78 Nguyễn Huệ, P. Bến Nghé, Quận 1, TP. HCM', '0901234503', 'lenam@gmail.com', NULL),
+    (N'Phạm Tuấn', N'Anh', N'12 Điện Biên Phủ, P. 15, Bình Thạnh, TP. HCM', '0901234504', 'tuananh@gmail.com', NULL),
+    (N'Trần Thu', N'Trang', N'56 Pastuer, P. Bến Nghé, Quận 1, TP. HCM', '0901234505', 'thutrang@gmail.com', NULL),
+    (N'Vũ Đức', N'Thịnh', N'89 Võ Thị Sáu, P. 7, Quận 3, TP. HCM', '0901234506', 'ducthinh@gmail.com', NULL),
+    (N'Đặng Hoàng', N'Minh', N'34 Nam Kỳ Khởi Nghĩa, Quận 1, TP. HCM', '0901234507', 'hoangminh@gmail.com', NULL),
+    (N'Bùi Thị', N'Mai', N'90 Cách Mạng Tháng 8, Quận 3, TP. HCM', '0901234508', 'thimai@gmail.com', NULL),
+    (N'Đỗ Quốc', N'Toàn', N'23 Lý Tự Trọng, Quận 1, TP. HCM', '0901234509', 'quoctoan@gmail.com', NULL),
+    (N'Hồ Văn', N'Thành', N'67 Trần Hưng Đạo, Quận 5, TP. HCM', '0901234510', 'vanthanh@gmail.com', NULL),
+    (N'Ngô Đình', N'Khang', N'11 Nguyễn Thị Minh Khai, Quận 1, TP. HCM', '0901234511', 'dinhkhang@gmail.com', NULL),
+    (N'Dương Thị', N'Diệu', N'44 Lê Duẩn, Quận 1, TP. HCM', '0901234512', 'thidieu@gmail.com', NULL),
+    (N'Lý Văn', N'Thái', N'88 Hoàng Văn Thụ, Phú Nhuận, TP. HCM', '0901234513', 'vanthai@gmail.com', NULL),
+    (N'Trịnh Minh', N'Tuấn', N'15 Phan Đăng Lưu, Bình Thạnh, TP. HCM', '0901234514', 'minhtuan@gmail.com', NULL),
+    (N'Đinh Quốc', N'Bảo', N'99 Cộng Hòa, Tân Bình, TP. HCM', '0901234515', 'quocbao@gmail.com', NULL),
+    (N'Mai Văn', N'Khánh', N'33 Bạch Đằng, Bình Thạnh, TP. HCM', '0901234516', 'vankhanh@gmail.com', NULL),
+    (N'Lâm Ngọc', N'Hải', N'77 Xô Viết Nghệ Tĩnh, Bình Thạnh, TP. HCM', '0901234517', 'ngochai@gmail.com', NULL),
+    (N'Đoàn Thị', N'Hương', N'22 Đinh Tiên Hoàng, Quận 1, TP. HCM', '0901234518', 'thihuong@gmail.com', NULL),
+    (N'Võ Quốc', N'Việt', N'55 Phan Xích Long, Phú Nhuận, TP. HCM', '0901234519', 'quocviet@gmail.com', NULL),
+    (N'Trương Văn', N'Đức', N'66 Nguyễn Đình Chiểu, Quận 3, TP. HCM', '0901234520', 'vanduc@gmail.com', NULL),
+    (N'Phan Văn', N'Lộc', N'40 Nguyễn Trãi, Quận 5, TP. HCM', '0901234521', 'vanloc@gmail.com', NULL),
+    (N'Cao Thị', N'Kim Oanh', N'18 Nguyễn Bỉnh Khiêm, Quận 1, TP. HCM', '0901234522', 'kimoanh@gmail.com', NULL),
+    (N'Huỳnh Văn', N'Sang', N'82 Trần Quang Khải, Quận 1, TP. HCM', '0901234523', 'vansang@gmail.com', NULL),
+    (N'Lương Thị', N'Cúc', N'51 Nơ Trang Long, Bình Thạnh, TP. HCM', '0901234524', 'thicuc@gmail.com', NULL),
+    (N'Tạ Quốc', N'Huy', N'37 Huỳnh Thúc Kháng, Quận 1, TP. HCM', '0901234525', 'quochuy@gmail.com', NULL);
+END;
+GO
+
+IF (SELECT COUNT(*) FROM dbo.PHUHUYNH_TRE) < 25
+BEGIN
+    DELETE FROM dbo.PHUHUYNH_TRE;
+
+    INSERT INTO dbo.PHUHUYNH_TRE (maPhuHuynh, maTre, quanHe)
+    SELECT p.maPhuHuynh, t.maTre,
+        CASE 
+            WHEN p.hoTenDemPH LIKE N'%Thị%' 
+              OR p.hoTenDemPH LIKE N'%Thu%' 
+              OR p.tenPH LIKE N'%Trang%' 
+              OR p.tenPH LIKE N'%Oanh%' 
+              OR p.tenPH LIKE N'%Mai%' 
+              OR p.tenPH LIKE N'%Cúc%' 
+              OR p.tenPH LIKE N'%Thu%' 
+              OR p.tenPH LIKE N'%Diệu%' 
+              OR p.tenPH LIKE N'%Hương%' 
+            THEN N'Mẹ'
+            ELSE N'Bố'
+        END AS quanHe
+    FROM (
+        SELECT ROW_NUMBER() OVER (ORDER BY maPhuHuynh) AS rn, maPhuHuynh, hoTenDemPH, tenPH FROM dbo.PHUHUYNH
+    ) p
+    JOIN (
+        SELECT ROW_NUMBER() OVER (ORDER BY maTre) AS rn, maTre FROM dbo.TREEM WHERE maLopHoc = (SELECT TOP 1 maLopHoc FROM dbo.LOPHOC WHERE tenLopHoc = N'Lớp Mầm 1')
+    ) t ON p.rn = t.rn;
+END;
+GO

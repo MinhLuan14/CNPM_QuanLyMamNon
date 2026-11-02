@@ -78,7 +78,7 @@ export default function TeacherDashboard({ data, onNavigate }) {
                       <span className="teacher-child-avatar">{child.name.slice(0, 1)}</span>
                       <div>
                         <strong>{child.name}</strong>
-                        <span>{child.nickname} · Phụ huynh: {child.parentName}</span>
+                        <span>Phụ huynh: {child.parentName || 'Chưa cập nhật'}</span>
                       </div>
                       <span className="teacher-status-pill">{child.status}</span>
                     </div>
