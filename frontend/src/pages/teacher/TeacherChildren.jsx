@@ -20,14 +20,29 @@ export default function TeacherChildren({ data }) {
         {children.length ? (
           <div className="teacher-child-table-wrap">
             <table className="teacher-child-table">
-              <thead><tr><th>HỌ TÊN</th><th>NGÀY SINH</th><th>PHỤ HUYNH</th><th>LIÊN HỆ</th><th>TÌNH TRẠNG</th></tr></thead>
+              <thead>
+                <tr>
+                  <th>MÃ TRẺ</th>
+                  <th>HỌ VÀ TÊN</th>
+                  <th>NGÀY SINH</th>
+                  <th>NƠI SINH</th>
+                  <th>LỚP HỌC</th>
+                  <th>TÌNH TRẠNG</th>
+                </tr>
+              </thead>
               <tbody>
                 {children.map((child) => (
                   <tr key={child.id}>
-                    <td><strong><Baby size={14} style={{ verticalAlign: 'middle', marginRight: 6 }} />{child.name}</strong><br />{child.nickname}</td>
+                    <td><strong>#{child.id}</strong></td>
+                    <td>
+                      <strong>
+                        <Baby size={14} style={{ verticalAlign: 'middle', marginRight: 6 }} />
+                        {child.name}
+                      </strong>
+                    </td>
                     <td>{new Date(`${child.dob}T00:00:00`).toLocaleDateString('vi-VN')}</td>
-                    <td>{child.parentName || 'Chưa có dữ liệu'}{child.parentRelationship ? ` (${child.parentRelationship})` : ''}</td>
-                    <td>{child.parentPhone || 'Chưa có dữ liệu'}</td>
+                    <td>{child.birthplace || 'TP. Hồ Chí Minh'}</td>
+                    <td>{child.className || classroom?.name || '—'}</td>
                     <td><span className="teacher-status-pill">{child.status}</span></td>
                   </tr>
                 ))}

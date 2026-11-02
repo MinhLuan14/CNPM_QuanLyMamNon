@@ -3,7 +3,7 @@ import {
     Menu,
     Bell,
     Search,
-    ChevronDown,
+    LogOut,
 } from 'lucide-react'
 import { authRequest, fetchCsrfToken } from '../api/auth'
 import '../assets/CSS/Header.css'
@@ -53,15 +53,23 @@ function Header({ active, setSidebarOpen, user, onLogout }) {
                     <span />
                 </button>
 
-                <button className="profile" type="button" onClick={handleLogout} title="Đăng xuất">
+                <div className="profile" title={`Tài khoản: ${user.tenDangNhap}`}>
                     <div className="avatar">{user.tenDangNhap.slice(0, 2).toUpperCase()}</div>
 
                     <div className="profile-info">
                         <strong>{user.tenDangNhap}</strong>
                         <span>{user.vaiTro}</span>
                     </div>
+                </div>
 
-                    <ChevronDown size={16} />
+                <button
+                    className="admin-logout-btn"
+                    type="button"
+                    onClick={handleLogout}
+                    title="Đăng xuất khỏi hệ thống"
+                >
+                    <LogOut size={16} />
+                    <span>Đăng xuất</span>
                 </button>
             </div>
         </header>

@@ -23,9 +23,6 @@ export default function TeacherLayout({ active, setActive, user, teacher, onLogo
           onLogout={onLogout}
         />
         <div className="teacher-content">
-          {active !== 'Thông tin cá nhân' && (
-            <div className="teacher-demo-notice">Dữ liệu giao diện minh họa · Chưa kết nối nghiệp vụ backend</div>
-          )}
           {children}
         </div>
       </main>

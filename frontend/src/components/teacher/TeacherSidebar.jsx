@@ -1,7 +1,5 @@
 import {
-  Bell,
   BookOpen,
-  ClipboardList,
   GraduationCap,
   LayoutDashboard,
   School,
@@ -14,8 +12,6 @@ const menuItems = [
   { title: 'Lớp học của tôi', icon: School },
   { title: 'Danh sách trẻ', icon: Users },
   { title: 'Thực đơn', icon: BookOpen },
-  { title: 'Công việc & báo cáo', icon: ClipboardList },
-  { title: 'Thông báo', icon: Bell },
   { title: 'Thông tin cá nhân', icon: GraduationCap },
 ]
 
