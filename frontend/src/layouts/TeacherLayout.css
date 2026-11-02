@@ -335,7 +335,7 @@
 
 .teacher-stat-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 15px;
 }
 
@@ -356,14 +356,20 @@
 }
 
 .teacher-stat-icon {
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 44px;
   height: 44px;
   flex: 0 0 auto;
   color: #118ba4;
   background: #e8f8fa;
   border-radius: 14px;
+}
+
+.teacher-stat-icon svg {
+  display: block;
+  flex-shrink: 0;
 }
 
 .teacher-stat-icon.mint {
@@ -381,17 +387,17 @@
   background: #f0edff;
 }
 
-.teacher-stat-card span,
-.teacher-stat-card strong {
+.teacher-stat-card > div span,
+.teacher-stat-card > div strong {
   display: block;
 }
 
-.teacher-stat-card span {
+.teacher-stat-card > div span {
   color: #758a98;
   font-size: 10px;
 }
 
-.teacher-stat-card strong {
+.teacher-stat-card > div strong {
   margin-top: 5px;
   color: #243e4d;
   font-size: 21px;
@@ -460,26 +466,33 @@
 }
 
 .teacher-class-icon {
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 48px;
   height: 48px;
+  flex: 0 0 auto;
   color: #1589a7;
   background: #dff4f8;
   border-radius: 15px;
 }
 
-.teacher-class-summary strong,
-.teacher-class-summary span {
+.teacher-class-icon svg {
+  display: block;
+  flex-shrink: 0;
+}
+
+.teacher-class-summary > div strong,
+.teacher-class-summary > div span {
   display: block;
 }
 
-.teacher-class-summary strong {
+.teacher-class-summary > div strong {
   color: #2e4c5c;
   font-size: 13px;
 }
 
-.teacher-class-summary span,
+.teacher-class-summary > div span,
 .teacher-class-room {
   margin-top: 4px;
   color: #8295a0;
@@ -508,8 +521,9 @@
 }
 
 .teacher-child-avatar {
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 38px;
   height: 38px;
   flex: 0 0 auto;
@@ -518,6 +532,7 @@
   border-radius: 13px;
   font-size: 14px;
   font-weight: 800;
+  line-height: 1;
 }
 
 .teacher-child-row>div,
@@ -528,29 +543,29 @@
   flex: 1;
 }
 
-.teacher-child-row strong,
-.teacher-child-row span,
-.teacher-notice-row strong,
-.teacher-notice-row span,
-.teacher-task-row strong,
-.teacher-task-row span,
-.teacher-meal-row strong,
-.teacher-meal-row span {
+.teacher-child-row > div strong,
+.teacher-child-row > div span,
+.teacher-notice-row > div strong,
+.teacher-notice-row > div span,
+.teacher-task-row > div strong,
+.teacher-task-row > div span,
+.teacher-meal-row > div strong,
+.teacher-meal-row > div span {
   display: block;
 }
 
-.teacher-child-row strong,
-.teacher-notice-row strong,
-.teacher-task-row strong,
-.teacher-meal-row strong {
+.teacher-child-row > div strong,
+.teacher-notice-row > div strong,
+.teacher-task-row > div strong,
+.teacher-meal-row > div strong {
   color: #344f5e;
   font-size: 11px;
 }
 
-.teacher-child-row span,
-.teacher-notice-row span,
-.teacher-task-row span,
-.teacher-meal-row span {
+.teacher-child-row > div span,
+.teacher-notice-row > div span,
+.teacher-task-row > div span,
+.teacher-meal-row > div span {
   margin-top: 4px;
   color: #8294a0;
   font-size: 10px;

@@ -1,6 +1,8 @@
 package vhu.edu.babysharkedu.service;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -11,8 +13,11 @@ import vhu.edu.babysharkedu.dto.LopHocDTO;
 import vhu.edu.babysharkedu.dto.LopHocRequest;
 import vhu.edu.babysharkedu.dto.TreEmDTO;
 import vhu.edu.babysharkedu.model.LopHoc;
+import vhu.edu.babysharkedu.model.PhuHuynhTre;
+import vhu.edu.babysharkedu.model.TreEm;
 import vhu.edu.babysharkedu.repository.LopHocRepository;
 import vhu.edu.babysharkedu.repository.PhanCongGiaoVienRepository;
+import vhu.edu.babysharkedu.repository.PhuHuynhTreRepository;
 import vhu.edu.babysharkedu.repository.TreEmRepository;
 
 @Service
@@ -23,14 +28,17 @@ public class LopHocService {
     private final LopHocRepository lopHocRepository;
     private final TreEmRepository treEmRepository;
     private final PhanCongGiaoVienRepository phanCongGiaoVienRepository;
+    private final PhuHuynhTreRepository phuHuynhTreRepository;
 
     public LopHocService(
             LopHocRepository lopHocRepository,
             TreEmRepository treEmRepository,
-            PhanCongGiaoVienRepository phanCongGiaoVienRepository) {
+            PhanCongGiaoVienRepository phanCongGiaoVienRepository,
+            PhuHuynhTreRepository phuHuynhTreRepository) {
         this.lopHocRepository = lopHocRepository;
         this.treEmRepository = treEmRepository;
         this.phanCongGiaoVienRepository = phanCongGiaoVienRepository;
+        this.phuHuynhTreRepository = phuHuynhTreRepository;
     }
 
     @Transactional(readOnly = true)
@@ -78,17 +86,41 @@ public class LopHocService {
     @Transactional(readOnly = true)
     public List<TreEmDTO> layTreEm(Integer maLopHoc) {
         timLopHoc(maLopHoc);
-        return treEmRepository.findAllByLopHocMaLopHocOrderByMaTre(maLopHoc).stream()
-                .map(tre -> new TreEmDTO(
-                        tre.getMaTre(),
-                        tre.getHoTenDemTre(),
-                        tre.getTenTre(),
-                        tre.getNgayThangNamSinh(),
-                        tre.getNoiSinh(),
-                        tre.getLopHoc() == null ? null : tre.getLopHoc().getMaLopHoc(),
-                        tre.getLopHoc() == null ? null : tre.getLopHoc().getTenLopHoc(),
-                        tre.getTrangThaiHocTap(),
-                        "/api/tre-em/" + tre.getMaTre() + "/anh-dai-dien"))
+        List<TreEm> treList = treEmRepository.findAllByLopHocMaLopHocOrderByMaTre(maLopHoc);
+        if (treList.isEmpty()) {
+            return List.of();
+        }
+
+        List<Integer> maTreIds = treList.stream().map(TreEm::getMaTre).toList();
+        Map<Integer, PhuHuynhTre> phuHuynhMap = phuHuynhTreRepository.findAllWithPhuHuynhByTreIds(maTreIds).stream()
+                .collect(Collectors.toMap(
+                        lk -> lk.getTreEm().getMaTre(),
+                        lk -> lk,
+                        (existing, replacement) -> existing));
+
+        return treList.stream()
+                .map(tre -> {
+                    PhuHuynhTre lk = phuHuynhMap.get(tre.getMaTre());
+                    String tenPH = lk != null && lk.getPhuHuynh() != null
+                            ? (lk.getPhuHuynh().getHoTenDemPH() + " " + lk.getPhuHuynh().getTenPH()).trim()
+                            : null;
+                    String quanHe = lk != null ? lk.getQuanHe() : null;
+                    String sdt = lk != null && lk.getPhuHuynh() != null ? lk.getPhuHuynh().getSoDienThoai() : null;
+
+                    return new TreEmDTO(
+                            tre.getMaTre(),
+                            tre.getHoTenDemTre(),
+                            tre.getTenTre(),
+                            tre.getNgayThangNamSinh(),
+                            tre.getNoiSinh(),
+                            tre.getLopHoc() == null ? null : tre.getLopHoc().getMaLopHoc(),
+                            tre.getLopHoc() == null ? null : tre.getLopHoc().getTenLopHoc(),
+                            tre.getTrangThaiHocTap(),
+                            "/api/tre-em/" + tre.getMaTre() + "/anh-dai-dien",
+                            tenPH,
+                            quanHe,
+                            sdt);
+                })
                 .toList();
     }
 

@@ -1,23 +1,20 @@
 import {
   ArrowRight,
-  Bell,
   BookOpen,
   CalendarDays,
-  ClipboardList,
   GraduationCap,
   School,
   Users,
 } from 'lucide-react'
 
 export default function TeacherDashboard({ data, onNavigate }) {
-  const { teacher, classroom, children, tasks, notifications, menu } = data
+  const { teacher, classroom, children, menu } = data
   const today = new Date().toLocaleDateString('vi-VN', {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
   })
-  const openTasks = data.availability.tasks ? tasks.filter((task) => task.status !== 'Đã hoàn thành').length : null
-  const todayMenu = menu[0]
+  const todayMenu = menu.find((item) => item.day && today.toLowerCase().includes(item.day.toLowerCase())) || menu[0]
 
   return (
     <div className="teacher-page">
@@ -47,14 +44,6 @@ export default function TeacherDashboard({ data, onNavigate }) {
         <article className="teacher-stat-card">
           <span className="teacher-stat-icon mint"><Users size={22} /></span>
           <div><span>Trẻ trong lớp được phân công</span><strong>{children.length}</strong></div>
-        </article>
-        <article className="teacher-stat-card">
-          <span className="teacher-stat-icon amber"><ClipboardList size={22} /></span>
-          <div><span>Việc cần hoàn thành</span><strong>{openTasks ?? 'Chưa hỗ trợ'}</strong></div>
-        </article>
-        <article className="teacher-stat-card">
-          <span className="teacher-stat-icon purple"><Bell size={22} /></span>
-          <div><span>Thông báo mới</span><strong>{data.availability.notifications ? notifications.length : 'Chưa hỗ trợ'}</strong></div>
         </article>
       </section>
 
@@ -89,7 +78,7 @@ export default function TeacherDashboard({ data, onNavigate }) {
                       <span className="teacher-child-avatar">{child.name.slice(0, 1)}</span>
                       <div>
                         <strong>{child.name}</strong>
-                        <span>{child.nickname} · Phụ huynh: {child.parentName}</span>
+                        <span>Phụ huynh: {child.parentName || 'Chưa cập nhật'}</span>
                       </div>
                       <span className="teacher-status-pill">{child.status}</span>
                     </div>
@@ -119,25 +108,6 @@ export default function TeacherDashboard({ data, onNavigate }) {
                 <div className="teacher-meal-row"><span className="teacher-meal-marker" /><div><strong>Bữa xế</strong><span>{todayMenu.afternoonSnack.dish}</span></div></div>
               </div>
             ) : <div className="teacher-empty">{data.availability.menu ? 'Chưa có thực đơn.' : 'API thực đơn hiện chỉ cho phép tài khoản quản trị truy cập.'}</div>}
-          </section>
-
-          <section className="teacher-panel">
-            <div className="teacher-panel-heading">
-              <div><ClipboardList size={19} /><h3>Công việc sắp tới</h3></div>
-              <button className="teacher-link-button" onClick={() => onNavigate('Công việc & báo cáo')}>
-                Xem việc <ArrowRight size={14} />
-              </button>
-            </div>
-            {!data.availability.tasks ? <div className="teacher-empty">Hệ thống chưa có API công việc dành cho giáo viên.</div> : tasks.filter((task) => task.status !== 'Đã hoàn thành').slice(0, 2).length ? (
-              <div className="teacher-task-list">
-                {tasks.filter((task) => task.status !== 'Đã hoàn thành').slice(0, 2).map((task) => (
-                  <div className="teacher-task-row" key={task.id}>
-                    <span className="teacher-meal-marker" />
-                    <div><strong>{task.title}</strong><span>{task.category} · Hạn {new Date(`${task.due}T00:00:00`).toLocaleDateString('vi-VN')}</span></div>
-                  </div>
-                ))}
-              </div>
-            ) : <div className="teacher-empty">Không có công việc đang chờ.</div>}
           </section>
         </div>
       </div>
