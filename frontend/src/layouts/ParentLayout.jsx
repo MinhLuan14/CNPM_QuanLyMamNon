@@ -22,9 +22,6 @@ export default function ParentLayout({ active, setActive, user, onLogout, childr
           onLogout={onLogout}
         />
         <div className="parent-content">
-          {active !== 'Thông tin cá nhân' && active !== 'Học phí & tiền ăn' && (
-            <div className="parent-demo-notice">Dữ liệu giao diện minh họa · Chưa kết nối nghiệp vụ cổng phụ huynh</div>
-          )}
           {children}
         </div>
       </main>
