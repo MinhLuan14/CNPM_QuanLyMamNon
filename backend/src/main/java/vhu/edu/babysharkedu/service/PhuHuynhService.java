@@ -2,6 +2,7 @@ package vhu.edu.babysharkedu.service;
 
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
@@ -10,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import vhu.edu.babysharkedu.dto.PhuHuynhHoSoDTO;
+import vhu.edu.babysharkedu.dto.PhuHuynhThanhToanDTO;
 import vhu.edu.babysharkedu.dto.PhuHuynhTreDTO;
 import vhu.edu.babysharkedu.dto.CapNhatPhuHuynhRequest;
 import vhu.edu.babysharkedu.dto.TaiKhoanPhuHuynhDTO;
@@ -17,20 +19,35 @@ import vhu.edu.babysharkedu.dto.ThongTinLienKetPhuHuynhDTO;
 import vhu.edu.babysharkedu.model.PhuHuynh;
 import vhu.edu.babysharkedu.model.PhuHuynhTre;
 import vhu.edu.babysharkedu.model.TaiKhoan;
+import vhu.edu.babysharkedu.repository.PhanCongGiaoVienRepository;
 import vhu.edu.babysharkedu.repository.PhuHuynhRepository;
 import vhu.edu.babysharkedu.repository.PhuHuynhTreRepository;
+import vhu.edu.babysharkedu.repository.ThanhToanRepository;
 import vhu.edu.babysharkedu.security.TaiKhoanPrincipal;
 
 @Service
 public class PhuHuynhService {
     private final PhuHuynhRepository phuHuynhRepository;
     private final PhuHuynhTreRepository phuHuynhTreRepository;
+    private final ThanhToanRepository thanhToanRepository;
+    private final PhanCongGiaoVienRepository phanCongGiaoVienRepository;
 
     public PhuHuynhService(
             PhuHuynhRepository phuHuynhRepository,
             PhuHuynhTreRepository phuHuynhTreRepository) {
+        this(phuHuynhRepository, phuHuynhTreRepository, null, null);
+    }
+
+    @Autowired
+    public PhuHuynhService(
+            PhuHuynhRepository phuHuynhRepository,
+            PhuHuynhTreRepository phuHuynhTreRepository,
+            ThanhToanRepository thanhToanRepository,
+            PhanCongGiaoVienRepository phanCongGiaoVienRepository) {
         this.phuHuynhRepository = phuHuynhRepository;
         this.phuHuynhTreRepository = phuHuynhTreRepository;
+        this.thanhToanRepository = thanhToanRepository;
+        this.phanCongGiaoVienRepository = phanCongGiaoVienRepository;
     }
 
     @Transactional(readOnly = true)
@@ -172,5 +189,45 @@ public class PhuHuynhService {
                 lienKet.getTreEm().getHoTenDemTre(),
                 lienKet.getTreEm().getTenTre(),
                 lienKet.getQuanHe());
+    }
+
+    @Transactional(readOnly = true)
+    public List<PhuHuynhThanhToanDTO> layLichSuThanhToan(TaiKhoanPrincipal principal) {
+        PhuHuynh parent = phuHuynhRepository.findByTaiKhoanMaTaiKhoan(principal.getMaTaiKhoan())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy hồ sơ phụ huynh."));
+        return thanhToanRepository.findAllByPhuHuynhWithHocPhiAndTreEm(parent.getMaPhuHuynh())
+                .stream()
+                .map(t -> new PhuHuynhThanhToanDTO(
+                        t.getMaThanhToan(),
+                        t.getHocPhi().getMaHocPhi(),
+                        t.getHocPhi().getThangApDung() + "/" + t.getHocPhi().getNamApDung(),
+                        t.getHocPhi().getTreEm().getMaTre(),
+                        (t.getHocPhi().getTreEm().getHoTenDemTre() + " " + t.getHocPhi().getTreEm().getTenTre()).trim(),
+                        t.getSoTienThanhToan(),
+                        t.getPhuongThucThanhToan(),
+                        t.getMaGiaoDich(),
+                        t.getThoiGianThanhToan(),
+                        t.getTrangThai(),
+                        t.getNoiDung()))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<String> layGiaoVienTheoLop(Integer maLopHoc, TaiKhoanPrincipal principal) {
+        PhuHuynh parent = phuHuynhRepository.findByTaiKhoanMaTaiKhoan(principal.getMaTaiKhoan())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy hồ sơ phụ huynh."));
+        boolean coConHocLopNay = phuHuynhTreRepository
+                .findAllByPhuHuynhMaPhuHuynhOrderByTreEmMaTreAsc(parent.getMaPhuHuynh())
+                .stream()
+                .anyMatch(link -> link.getTreEm().getLopHoc() != null
+                        && maLopHoc.equals(link.getTreEm().getLopHoc().getMaLopHoc()));
+        if (!coConHocLopNay) {
+            throw new AccessDeniedException("Bạn không có con đang học tại lớp này.");
+        }
+        return phanCongGiaoVienRepository.findAllByLopHocWithGiaoVien(maLopHoc)
+                .stream()
+                .map(pc -> (pc.getGiaoVien().getHoTenDem() + " " + pc.getGiaoVien().getTenGiaoVien()).trim()
+                        + (pc.getVaiTro() != null && !pc.getVaiTro().isBlank() ? " (" + pc.getVaiTro() + ")" : ""))
+                .toList();
     }
 }

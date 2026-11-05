@@ -1,6 +1,8 @@
 package vhu.edu.babysharkedu.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import java.util.List;
 import org.springframework.stereotype.Repository;
 
@@ -12,4 +14,7 @@ public interface PhanCongGiaoVienRepository extends JpaRepository<PhanCongGiaoVi
     boolean existsByLopHocMaLopHoc(Integer maLopHoc);
 
     List<PhanCongGiaoVien> findAllByGiaoVienMaGiaoVienOrderByNgayBatDauDesc(Integer maGiaoVien);
+
+    @Query("SELECT p FROM PhanCongGiaoVien p JOIN FETCH p.giaoVien WHERE p.lopHoc.maLopHoc = :maLopHoc")
+    List<PhanCongGiaoVien> findAllByLopHocWithGiaoVien(@Param("maLopHoc") Integer maLopHoc);
 }

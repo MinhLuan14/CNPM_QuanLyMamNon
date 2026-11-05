@@ -13,6 +13,17 @@ function fullName(first, last) {
 async function readLinkedChild(link) {
     try {
         const child = await readJson(`/api/tre-em/${link.maTre}`, 'Không thể tải hồ sơ trẻ.');
+        let teacherName = '';
+        if (child.maLopHoc) {
+            try {
+                const teachers = await readJson(`/api/phu-huynh/lop-hoc/${child.maLopHoc}/giao-vien`, 'Không thể tải giáo viên phụ trách.');
+                if (Array.isArray(teachers) && teachers.length > 0) {
+                    teacherName = teachers.join(', ');
+                }
+            } catch {
+                teacherName = '';
+            }
+        }
         return {
             id: child.maTre,
             fullName: fullName(child.hoTenDemTre, child.tenTre),
@@ -21,7 +32,7 @@ async function readLinkedChild(link) {
             classId: child.maLopHoc,
             status: child.trangThaiHocTap,
             relationship: link.quanHe || '',
-            teacherName: '',
+            teacherName,
         };
     } catch {
         return {
@@ -39,9 +50,15 @@ async function readLinkedChild(link) {
 
 export async function loadParentPortalData() {
     const profile = await readJson('/api/profile', 'Không thể tải hồ sơ phụ huynh.');
-    const [children, invoicesResult] = await Promise.all([
+    const [children, invoicesResult, menuResult, paymentsResult] = await Promise.all([
         Promise.all((profile.treEm || []).map(readLinkedChild)),
         readJson('/api/phu-huynh/hoc-phi', 'Không thể tải danh sách học phí.')
+            .then((data) => ({ status: 'fulfilled', data }))
+            .catch((error) => ({ status: 'rejected', error })),
+        readJson('/api/thuc-don', 'Không thể tải thực đơn.')
+            .then((data) => ({ status: 'fulfilled', data }))
+            .catch((error) => ({ status: 'rejected', error })),
+        readJson('/api/phu-huynh/thanh-toan', 'Không thể tải lịch sử thanh toán.')
             .then((data) => ({ status: 'fulfilled', data }))
             .catch((error) => ({ status: 'rejected', error })),
     ]);
@@ -65,6 +82,32 @@ export async function loadParentPortalData() {
             })),
         }))
         : [];
+    const menuAvailable = menuResult.status === 'fulfilled';
+    const menu = menuAvailable
+        ? menuResult.data
+            .flatMap((td) => (td.chiTiet || []).map((ct) => ({
+                id: ct.maChiTietThucDon,
+                date: ct.ngayAn,
+                meal: ct.buaAn,
+                dish: ct.monAn?.tenMonAn || '',
+                ingredients: ct.monAn?.thanhPhan || '',
+                note: ct.ghiChu || '',
+            })))
+            .sort((a, b) => (a.date || '').localeCompare(b.date || ''))
+        : [];
+    const paymentsAvailable = paymentsResult.status === 'fulfilled';
+    const payments = paymentsAvailable
+        ? paymentsResult.data.map((payment) => ({
+            id: payment.maThanhToan,
+            paidAt: payment.thoiGianThanhToan,
+            childName: payment.hoTenTre,
+            month: payment.thangNamHocPhi,
+            method: payment.phuongThucThanhToan,
+            transactionCode: payment.maGiaoDich,
+            amount: Number(payment.soTienThanhToan),
+            status: payment.trangThai || 'Đã ghi nhận',
+        }))
+        : [];
     return {
         parent: {
             fullName: profile.hoTen || '',
@@ -73,15 +116,15 @@ export async function loadParentPortalData() {
             address: profile.diaChiLH || '',
         },
         children,
-        menu: [],
+        menu,
         invoices,
         invoiceError: invoicesAvailable ? '' : invoicesResult.error.message,
-        payments: [],
+        payments,
         notifications: [],
         availability: {
-            menu: false,
+            menu: menuAvailable,
             invoices: invoicesAvailable,
-            payments: false,
+            payments: paymentsAvailable,
             notifications: false,
         },
     };

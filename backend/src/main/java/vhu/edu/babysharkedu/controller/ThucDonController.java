@@ -22,7 +22,7 @@ import vhu.edu.babysharkedu.service.ThucDonService;
 
 @RestController
 @RequestMapping("/api/thuc-don")
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasAnyRole('ADMIN', 'GIAOVIEN', 'PHUHUYNH')")
 public class ThucDonController {
     private final ThucDonService thucDonService;
 
@@ -41,12 +41,14 @@ public class ThucDonController {
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     @ResponseStatus(HttpStatus.CREATED)
     public ThucDonDTO them(@RequestBody ThucDonRequest request) {
         return thucDonService.them(request);
     }
 
     @PutMapping("/{maThucDon}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ThucDonDTO capNhat(
             @PathVariable Integer maThucDon,
             @RequestBody ThucDonRequest request) {
@@ -54,12 +56,14 @@ public class ThucDonController {
     }
 
     @DeleteMapping("/{maThucDon}")
+    @PreAuthorize("hasRole('ADMIN')")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void xoa(@PathVariable Integer maThucDon) {
         thucDonService.xoa(maThucDon);
     }
 
     @PostMapping("/{maThucDon}/chi-tiet")
+    @PreAuthorize("hasRole('ADMIN')")
     @ResponseStatus(HttpStatus.CREATED)
     public ChiTietThucDonDTO themMon(
             @PathVariable Integer maThucDon,
@@ -68,6 +72,7 @@ public class ThucDonController {
     }
 
     @PutMapping("/{maThucDon}/chi-tiet/{maChiTietThucDon}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ChiTietThucDonDTO capNhatMon(
             @PathVariable Integer maThucDon,
             @PathVariable Integer maChiTietThucDon,
@@ -76,6 +81,7 @@ public class ThucDonController {
     }
 
     @DeleteMapping("/{maThucDon}/chi-tiet/{maChiTietThucDon}")
+    @PreAuthorize("hasRole('ADMIN')")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void xoaMon(
             @PathVariable Integer maThucDon,

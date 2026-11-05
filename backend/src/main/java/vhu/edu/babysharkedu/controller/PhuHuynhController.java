@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import vhu.edu.babysharkedu.dto.CapNhatPhuHuynhRequest;
 import vhu.edu.babysharkedu.dto.PhuHuynhHoSoDTO;
+import vhu.edu.babysharkedu.dto.PhuHuynhThanhToanDTO;
 import vhu.edu.babysharkedu.dto.TaiKhoanPhuHuynhDTO;
 import vhu.edu.babysharkedu.dto.ThongTinLienKetPhuHuynhDTO;
 import vhu.edu.babysharkedu.dto.PhuHuynhCapTaiKhoanDTO;
@@ -58,6 +59,21 @@ public class PhuHuynhController {
             @PathVariable Integer maHocPhi,
             @AuthenticationPrincipal TaiKhoanPrincipal principal) {
         return hocPhiService.taoQrChoPhuHuynh(maHocPhi, principal);
+    }
+
+    @GetMapping("/thanh-toan")
+    @PreAuthorize("hasRole('PHUHUYNH')")
+    public List<PhuHuynhThanhToanDTO> layLichSuThanhToan(
+            @AuthenticationPrincipal TaiKhoanPrincipal principal) {
+        return phuHuynhService.layLichSuThanhToan(principal);
+    }
+
+    @GetMapping("/lop-hoc/{maLopHoc}/giao-vien")
+    @PreAuthorize("hasRole('PHUHUYNH')")
+    public List<String> layGiaoVienTheoLop(
+            @PathVariable Integer maLopHoc,
+            @AuthenticationPrincipal TaiKhoanPrincipal principal) {
+        return phuHuynhService.layGiaoVienTheoLop(maLopHoc, principal);
     }
 
     @PostMapping
