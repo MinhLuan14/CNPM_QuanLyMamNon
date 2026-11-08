@@ -5,9 +5,11 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.WeekFields;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -47,6 +49,17 @@ public class ThucDonService {
     }
 
     @Transactional(readOnly = true)
+    public List<ThucDonDTO> layTatCaDaCongKhai() {
+        return thucDonRepository.findAll().stream()
+                .filter(menu -> Boolean.TRUE.equals(menu.getTrangThai()))
+                .sorted(Comparator.comparing(
+                        ThucDon::getNgayBatDau,
+                        Comparator.nullsLast(Comparator.naturalOrder())))
+                .map(menu -> toDTO(menu, layChiTietMon(menu.getMaThucDon())))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
     public ThucDonDTO layChiTiet(Integer maThucDon) {
         ThucDon menu = timThucDon(maThucDon);
         return toDTO(menu, layChiTietMon(menu.getMaThucDon()));
@@ -67,6 +80,17 @@ public class ThucDonService {
         validate(request);
         ThucDon menu = timThucDon(maThucDon);
         kiemTraTuanTrung(request, maThucDon);
+        boolean hasOutOfRangeItem = chiTietRepository
+                .findAllByThucDonMaThucDonOrderByNgayAnAscBuaAnAscMaChiTietThucDonAsc(maThucDon)
+                .stream()
+                .anyMatch(detail -> detail.getNgayAn() == null
+                        || detail.getNgayAn().toLocalDate().isBefore(request.ngayBatDau())
+                        || detail.getNgayAn().toLocalDate().isAfter(request.ngayKetThuc()));
+        if (hasOutOfRangeItem) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Không thể đổi thời gian thực đơn vì có món đã được thiết lập nằm ngoài khoảng ngày mới.");
+        }
         capNhat(menu, request);
         return toDTO(thucDonRepository.saveAndFlush(menu), layChiTietMon(maThucDon));
     }
@@ -74,12 +98,24 @@ public class ThucDonService {
     @Transactional
     public void xoa(Integer maThucDon) {
         ThucDon menu = timThucDon(maThucDon);
+        if (Boolean.TRUE.equals(menu.getTrangThai())) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Không thể xóa thực đơn đang được công khai. Hãy ngừng áp dụng trước khi xóa.");
+        }
         if (chiTietRepository.countByThucDonMaThucDon(maThucDon) > 0) {
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT,
                     "Không thể xóa thực đơn đang có chi tiết. Hãy xóa từng món ăn khỏi thực đơn trước.");
         }
-        thucDonRepository.delete(menu);
+        try {
+            thucDonRepository.delete(menu);
+            thucDonRepository.flush();
+        } catch (DataIntegrityViolationException exception) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Không thể xóa thực đơn đang được chi tiết thực đơn tham chiếu.");
+        }
     }
 
     @Transactional
@@ -143,14 +179,21 @@ public class ThucDonService {
 
     private void kiemTraTuanTrung(ThucDonRequest request, Integer excludedId) {
         boolean duplicate = thucDonRepository.findAll().stream()
-                .anyMatch(existing -> !existing.getMaThucDon().equals(excludedId)
-                        && existing.getTuanApDung() != null
-                        && existing.getNamApDung() != null
-                        && existing.getTuanApDung().equals(request.tuanApDung())
-                        && existing.getNamApDung().equals(request.namApDung()));
+                .anyMatch(existing -> {
+                    if (Objects.equals(existing.getMaThucDon(), excludedId)) {
+                        return false;
+                    }
+                    boolean sameWeek = Objects.equals(existing.getTuanApDung(), request.tuanApDung())
+                            && Objects.equals(existing.getNamApDung(), request.namApDung());
+                    boolean overlappingDates = existing.getNgayBatDau() != null
+                            && existing.getNgayKetThuc() != null
+                            && !existing.getNgayBatDau().toLocalDate().isAfter(request.ngayKetThuc())
+                            && !existing.getNgayKetThuc().toLocalDate().isBefore(request.ngayBatDau());
+                    return sameWeek || overlappingDates;
+                });
         if (duplicate) {
             throw new ResponseStatusException(
-                    HttpStatus.CONFLICT, "Đã có thực đơn cho tuần ISO này trong năm đã chọn.");
+                    HttpStatus.CONFLICT, "Đã có thực đơn cho tuần ISO này hoặc khoảng ngày đang chọn.");
         }
     }
 
@@ -190,12 +233,12 @@ public class ThucDonService {
         boolean duplicate = chiTietRepository
                 .findAllByThucDonMaThucDonOrderByNgayAnAscBuaAnAscMaChiTietThucDonAsc(maThucDon)
                 .stream()
-                .anyMatch(existing -> !existing.getMaChiTietThucDon().equals(excludedId)
-                        && existing.getMonAn().getMaMonAn().equals(request.maMonAn())
+                .anyMatch(existing -> !Objects.equals(existing.getMaChiTietThucDon(), excludedId)
+                        && Objects.equals(existing.getMonAn().getMaMonAn(), request.maMonAn())
                         && existing.getNgayAn() != null
                         && existing.getNgayAn().toLocalDate().equals(request.ngayAn())
                         && existing.getBuaAn() != null
-                        && existing.getBuaAn().equalsIgnoreCase(request.buaAn().trim()));
+                        && existing.getBuaAn().trim().equalsIgnoreCase(request.buaAn().trim()));
         if (duplicate) {
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT, "Món ăn này đã có trong cùng ngày và bữa ăn của thực đơn.");

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   School,
   Plus,
@@ -13,6 +13,8 @@ import {
 } from 'lucide-react';
 import { authRequest, fetchCsrfToken, responseError } from '../../api/auth';
 import Modal from '../../components/Modal';
+import FormFieldError from '../../components/FormFieldError';
+import { clearFieldError, focusFirstInvalid, requiredText, validateValues } from '../../utils/formValidation';
 
 const AGE_GROUPS = ['18 - 36 tháng', '3 - 4 tuổi', '4 - 5 tuổi', '5 - 6 tuổi'];
 
@@ -64,6 +66,8 @@ export default function ClassesManagement({ onShowToast }) {
   const [loadError, setLoadError] = useState('');
   const [failedRequest, setFailedRequest] = useState(null);
   const [capacityError, setCapacityError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
+  const saveInProgress = useRef(false);
   const requestApi = useCallback(async (path, options) => {
     const method = options?.method || 'GET';
     const response = await authRequest(path, options);
@@ -122,6 +126,8 @@ export default function ClassesManagement({ onShowToast }) {
   const openAddModal = () => {
     setEditingClassId(null);
     setFormData(EMPTY_FORM);
+    setFieldErrors({});
+    setCapacityError('');
     setIsFormModalOpen(true);
   };
 
@@ -133,39 +139,37 @@ export default function ClassesManagement({ onShowToast }) {
       soLuongToiDa: classItem.soLuongToiDa,
       doTuoi: classItem.doTuoi,
     });
+    setFieldErrors({});
+    setCapacityError('');
     setIsFormModalOpen(true);
   };
 
   const handleSaveSubmit = async (event) => {
     event.preventDefault();
+    if (saveInProgress.current) return;
     const roomNumber = Number(formData.phongHoc);
     const capacity = Number(formData.soLuongToiDa);
-    if (!formData.tenLopHoc.trim() || !Number.isInteger(roomNumber) || roomNumber <= 0
-      || !Number.isInteger(capacity) || capacity < 1 || capacity > 50
-      || !formData.doTuoi.trim()) {
-
-      if (!Number.isInteger(capacity) || capacity < 1 || capacity > 50) {
-        setCapacityError(
-          !Number.isInteger(capacity) || formData.soLuongToiDa === ''
-            ? 'Vui lòng nhập sĩ số là số nguyên từ 1 đến 50.'
-            : capacity > 50
-              ? 'Sĩ số tối đa không được vượt quá 50 trẻ.'
-              : 'Sĩ số tối thiểu là 1 trẻ.'
-        );
-        document.getElementById('class-capacity')?.focus();
-        return;
-      }
-
-      showToast(
-        'error',
-        'Dữ liệu chưa hợp lệ',
-        'Vui lòng nhập tên lớp, phòng học và sĩ số tối đa hợp lệ.'
-      );
+    const errors = validateValues(formData, {
+      tenLopHoc: (value) => requiredText(value, 'Tên lớp học'),
+      doTuoi: (value) => requiredText(value, 'Độ tuổi'),
+      phongHoc: (value) => requiredText(value, 'Phòng học')
+        || (!Number.isInteger(roomNumber) || roomNumber <= 0
+          ? 'Phòng học phải là số nguyên lớn hơn 0.' : ''),
+      soLuongToiDa: (value) => {
+        if (!String(value ?? '').trim()) return 'Vui lòng nhập sĩ số tối đa.';
+        if (!Number.isInteger(capacity)) return 'Sĩ số phải là số nguyên.';
+        if (capacity < 1) return 'Sĩ số tối thiểu là 1 trẻ.';
+        if (capacity > 50) return 'Sĩ số tối đa không được vượt quá 50 trẻ.';
+        return '';
+      },
+    });
+    setFieldErrors(errors);
+    setCapacityError(errors.soLuongToiDa || '');
+    if (Object.keys(errors).length) {
+      focusFirstInvalid(event.currentTarget, errors);
       return;
     }
-
-    setCapacityError('');
-
+    saveInProgress.current = true;
     setIsSaving(true);
     try {
       const csrfToken = await fetchCsrfToken();
@@ -198,6 +202,7 @@ export default function ClassesManagement({ onShowToast }) {
     } catch (error) {
       showToast('error', 'Không thể lưu lớp học', error.message || 'Vui lòng thử lại.');
     } finally {
+      saveInProgress.current = false;
       setIsSaving(false);
     }
   };
@@ -448,46 +453,67 @@ export default function ClassesManagement({ onShowToast }) {
             <button className="btn-secondary" onClick={() => setIsFormModalOpen(false)} disabled={isSaving}>
               Hủy
             </button>
-            <button className="btn-primary" onClick={handleSaveSubmit} disabled={isSaving}>
+            <button className="btn-primary" type="submit" form="class-form" disabled={isSaving}>
               <CheckCircle2 size={16} /> {isSaving ? 'Đang lưu...' : 'Lưu lớp học'}
             </button>
           </div>
         }
       >
-        <form onSubmit={handleSaveSubmit} className="modal-form-grid">
+        <form id="class-form" onSubmit={handleSaveSubmit} className="modal-form-grid" noValidate>
           <div className="form-group col-2">
             <label htmlFor="class-name">Tên lớp học *</label>
             <input
               id="class-name"
+              name="tenLopHoc"
               type="text"
               maxLength={50}
               placeholder="VD: Mầm 3 (Ánh Dương)"
               value={formData.tenLopHoc}
-              onChange={(event) => setFormData({ ...formData, tenLopHoc: event.target.value })}
+              onChange={(event) => {
+                setFormData({ ...formData, tenLopHoc: event.target.value });
+                clearFieldError(setFieldErrors, 'tenLopHoc');
+              }}
+              aria-invalid={Boolean(fieldErrors.tenLopHoc)}
+              aria-describedby={fieldErrors.tenLopHoc ? 'class-name-error' : undefined}
               required
             />
+            <FormFieldError id="class-name-error">{fieldErrors.tenLopHoc}</FormFieldError>
           </div>
           <div className="form-group">
             <label htmlFor="class-age">Độ tuổi *</label>
             <select
               id="class-age"
+              name="doTuoi"
               value={formData.doTuoi}
-              onChange={(event) => setFormData({ ...formData, doTuoi: event.target.value })}
+              onChange={(event) => {
+                setFormData({ ...formData, doTuoi: event.target.value });
+                clearFieldError(setFieldErrors, 'doTuoi');
+              }}
+              aria-invalid={Boolean(fieldErrors.doTuoi)}
+              aria-describedby={fieldErrors.doTuoi ? 'class-age-error' : undefined}
             >
               {AGE_GROUPS.map((ageGroup) => <option key={ageGroup} value={ageGroup}>{ageGroup}</option>)}
             </select>
+            <FormFieldError id="class-age-error">{fieldErrors.doTuoi}</FormFieldError>
           </div>
           <div className="form-group">
             <label htmlFor="class-room">Phòng học (số phòng) *</label>
             <input
               id="class-room"
+              name="phongHoc"
               type="number"
               min="1"
               step="1"
               value={formData.phongHoc}
-              onChange={(event) => setFormData({ ...formData, phongHoc: event.target.value })}
+              onChange={(event) => {
+                setFormData({ ...formData, phongHoc: event.target.value });
+                clearFieldError(setFieldErrors, 'phongHoc');
+              }}
+              aria-invalid={Boolean(fieldErrors.phongHoc)}
+              aria-describedby={fieldErrors.phongHoc ? 'class-room-error' : undefined}
               required
             />
+            <FormFieldError id="class-room-error">{fieldErrors.phongHoc}</FormFieldError>
           </div>
 
           <div className="form-group">
@@ -497,6 +523,7 @@ export default function ClassesManagement({ onShowToast }) {
 
             <input
               id="class-capacity"
+              name="soLuongToiDa"
               type="number"
               min="1"
               max="50"

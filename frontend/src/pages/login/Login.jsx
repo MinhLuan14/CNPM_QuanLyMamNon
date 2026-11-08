@@ -8,6 +8,8 @@ import childrenImg from '../../assets/iconchildren.png'
 import fishBlueImg from '../../assets/Fish.png';
 import { authRequest, fetchCsrfToken, responseError } from '../../api/auth'
 import Toast from '../../components/Toast'
+import FormFieldError from '../../components/FormFieldError'
+import { clearFieldError, focusFirstInvalid, requiredText, validEmail, validateValues } from '../../utils/formValidation'
 const Login = ({ onLogin }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -26,6 +28,9 @@ const Login = ({ onLogin }) => {
   const [recoveryMessage, setRecoveryMessage] = useState('');
   const [recoveryError, setRecoveryError] = useState('');
   const [isRecoverySubmitting, setIsRecoverySubmitting] = useState(false);
+  const [loginFieldErrors, setLoginFieldErrors] = useState({});
+  const [supportFieldErrors, setSupportFieldErrors] = useState({});
+  const [recoveryFieldErrors, setRecoveryFieldErrors] = useState({});
   const [supportForm, setSupportForm] = useState({
     hoTen: '',
     soDienThoai: '',
@@ -35,6 +40,8 @@ const Login = ({ onLogin }) => {
     noiDung: '',
   });
   const submitInProgress = useRef(false);
+  const supportSubmitInProgress = useRef(false);
+  const recoverySubmitInProgress = useRef(false);
   const loginToast = useMemo(() => error ? {
     type: 'error',
     title: 'Đăng nhập không thành công',
@@ -47,6 +54,7 @@ const Login = ({ onLogin }) => {
     setRecoveryEmail('');
     setRecoveryMessage('');
     setRecoveryError('');
+    setRecoveryFieldErrors({});
     setIsRecoveryOpen(true);
   };
 
@@ -55,10 +63,25 @@ const Login = ({ onLogin }) => {
     setIsRecoveryOpen(false);
     setRecoveryMode('login');
     setRecoveryError('');
+    setRecoveryFieldErrors({});
   };
 
   const handleRecoverySubmit = async (event) => {
     event.preventDefault();
+    if (recoverySubmitInProgress.current) return;
+    const errors = validateValues(
+      { recoveryEmail, recoveryRole },
+      {
+        recoveryEmail: (value) => requiredText(value, 'Email') || validEmail(value),
+        recoveryRole: (value) => requiredText(value, 'Loại tài khoản'),
+      },
+    );
+    setRecoveryFieldErrors(errors);
+    if (Object.keys(errors).length) {
+      focusFirstInvalid(event.currentTarget, errors);
+      return;
+    }
+    recoverySubmitInProgress.current = true;
     setIsRecoverySubmitting(true);
     setRecoveryError('');
     setRecoveryMessage('');
@@ -83,6 +106,7 @@ const Login = ({ onLogin }) => {
     } catch (requestError) {
       setRecoveryError(requestError.message || 'Không thể kết nối đến máy chủ.');
     } finally {
+      recoverySubmitInProgress.current = false;
       setIsRecoverySubmitting(false);
     }
   };
@@ -90,6 +114,18 @@ const Login = ({ onLogin }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (submitInProgress.current) return;
+    const errors = validateValues(
+      { username, password },
+      {
+        username: (value) => requiredText(value, 'Tên đăng nhập'),
+        password: (value) => requiredText(value, 'Mật khẩu'),
+      },
+    );
+    setLoginFieldErrors(errors);
+    if (Object.keys(errors).length) {
+      focusFirstInvalid(e.currentTarget, errors);
+      return;
+    }
 
     submitInProgress.current = true;
     setError('');
@@ -120,6 +156,7 @@ const Login = ({ onLogin }) => {
     setSupportForm((current) => ({ ...current, loaiYeuCau }));
     setSupportMessage('');
     setSupportError('');
+    setSupportFieldErrors({});
     setIsSupportOpen(true);
   };
 
@@ -136,10 +173,29 @@ const Login = ({ onLogin }) => {
     });
     setSupportMessage('');
     setSupportError('');
+    setSupportFieldErrors({});
   };
 
   const handleSupportSubmit = async (event) => {
     event.preventDefault();
+    if (supportSubmitInProgress.current) return;
+    const errors = validateValues(supportForm, {
+      hoTen: (value) => requiredText(value, 'Họ và tên'),
+      soDienThoai: (value) => {
+        const digits = String(value ?? '').replace(/[\s()+.-]/g, '');
+        return /^\d{10,15}$/.test(digits)
+          ? ''
+          : 'Số điện thoại phải có từ 10 đến 15 chữ số; có thể nhập dấu cách, dấu chấm, dấu gạch ngang hoặc mã quốc gia.';
+      },
+      email: (value) => validEmail(value, true),
+      noiDung: (value) => String(value ?? '').length > 1000 ? 'Nội dung không được vượt quá 1.000 ký tự.' : '',
+    });
+    setSupportFieldErrors(errors);
+    if (Object.keys(errors).length) {
+      focusFirstInvalid(event.currentTarget, errors);
+      return;
+    }
+    supportSubmitInProgress.current = true;
     setIsSupportSubmitting(true);
     setSupportError('');
     try {
@@ -163,6 +219,7 @@ const Login = ({ onLogin }) => {
     } catch (requestError) {
       setSupportError(requestError.message || 'Không thể kết nối đến máy chủ.');
     } finally {
+      supportSubmitInProgress.current = false;
       setIsSupportSubmitting(false);
     }
   };
@@ -251,33 +308,42 @@ const Login = ({ onLogin }) => {
               <p>Vui lòng nhập thông tin để tiếp tục</p>
             </div>
 
-            <form onSubmit={handleSubmit} className="login-form">
+            <form onSubmit={handleSubmit} className="login-form" noValidate>
               {/* Ô nhập Tên đăng nhập */}
               <div className="input-group">
                 <User className="input-icon" size={20} />
                 <input
+                  name="username"
                   type="text"
                   placeholder="Tên đăng nhập"
                   value={username}
                   onChange={(e) => {
                     setUsername(e.target.value);
                     setError('');
+                    clearFieldError(setLoginFieldErrors, 'username');
                   }}
+                  aria-invalid={Boolean(loginFieldErrors.username)}
+                  aria-describedby={loginFieldErrors.username ? 'login-username-error' : undefined}
                   required
                 />
               </div>
+              <FormFieldError id="login-username-error">{loginFieldErrors.username}</FormFieldError>
 
               {/* Ô nhập Mật khẩu */}
               <div className="input-group">
                 <Lock className="input-icon" size={20} />
                 <input
+                  name="password"
                   type={showPassword ? 'text' : 'password'}
                   placeholder="Mật khẩu"
                   value={password}
                   onChange={(e) => {
                     setPassword(e.target.value);
                     setError('');
+                    clearFieldError(setLoginFieldErrors, 'password');
                   }}
+                  aria-invalid={Boolean(loginFieldErrors.password)}
+                  aria-describedby={loginFieldErrors.password ? 'login-password-error' : undefined}
                   required
                 />
                 <button
@@ -289,6 +355,7 @@ const Login = ({ onLogin }) => {
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
+              <FormFieldError id="login-password-error">{loginFieldErrors.password}</FormFieldError>
 
               {/* Ghi nhớ & Quên mật khẩu */}
               <div className="form-options">
@@ -314,6 +381,9 @@ const Login = ({ onLogin }) => {
                 </button>
                 <button type="button" onClick={() => openRecovery('forgot-password')}>
                   Quên mật khẩu
+                </button>
+                <button type="button" onClick={() => openSupport('KHONG_DANG_NHAP_DUOC')}>
+                  Yêu cầu hỗ trợ
                 </button>
               </div>
             </form>
@@ -350,12 +420,16 @@ const Login = ({ onLogin }) => {
                   <button className="submit-btn" type="button" onClick={closeSupport}>Đóng</button>
                 </div>
               ) : (
-                <form className="support-form" onSubmit={handleSupportSubmit}>
+                <form className="support-form" onSubmit={handleSupportSubmit} noValidate>
                   <label>
                     Loại tài khoản *
                     <select
                       value={supportForm.loaiTaiKhoan}
-                      onChange={(event) => setSupportForm({ ...supportForm, loaiTaiKhoan: event.target.value })}
+                      name="loaiTaiKhoan"
+                      onChange={(event) => {
+                        setSupportForm({ ...supportForm, loaiTaiKhoan: event.target.value });
+                        clearFieldError(setSupportFieldErrors, 'loaiTaiKhoan');
+                      }}
                       required
                     >
                       <option value="PHUHUYNH">Phụ huynh</option>
@@ -365,38 +439,66 @@ const Login = ({ onLogin }) => {
                   <label>
                     Họ và tên đã đăng ký *
                     <input
+                      name="hoTen"
                       value={supportForm.hoTen}
-                      onChange={(event) => setSupportForm({ ...supportForm, hoTen: event.target.value })}
+                      onChange={(event) => {
+                        setSupportForm({ ...supportForm, hoTen: event.target.value });
+                        clearFieldError(setSupportFieldErrors, 'hoTen');
+                        setSupportError('');
+                      }}
                       maxLength={356}
                       autoComplete="name"
+                      aria-invalid={Boolean(supportFieldErrors.hoTen)}
+                      aria-describedby={supportFieldErrors.hoTen ? 'support-name-error' : undefined}
                       required
                     />
+                    <FormFieldError id="support-name-error">{supportFieldErrors.hoTen}</FormFieldError>
                   </label>
                   <label>
                     Số điện thoại đã đăng ký *
                     <input
+                      name="soDienThoai"
                       type="tel"
                       inputMode="numeric"
                       value={supportForm.soDienThoai}
-                      onChange={(event) => setSupportForm({ ...supportForm, soDienThoai: event.target.value })}
+                      onChange={(event) => {
+                        setSupportForm({ ...supportForm, soDienThoai: event.target.value });
+                        clearFieldError(setSupportFieldErrors, 'soDienThoai');
+                        setSupportError('');
+                      }}
                       maxLength={20}
+                      aria-invalid={Boolean(supportFieldErrors.soDienThoai)}
+                      aria-describedby={supportFieldErrors.soDienThoai ? 'support-phone-error' : undefined}
                       required
                     />
+                    <FormFieldError id="support-phone-error">{supportFieldErrors.soDienThoai}</FormFieldError>
                   </label>
                   <label>
                     Email đã đăng ký (nếu có)
                     <input
+                      name="email"
                       type="email"
                       value={supportForm.email}
-                      onChange={(event) => setSupportForm({ ...supportForm, email: event.target.value })}
+                      onChange={(event) => {
+                        setSupportForm({ ...supportForm, email: event.target.value });
+                        clearFieldError(setSupportFieldErrors, 'email');
+                        setSupportError('');
+                      }}
                       maxLength={100}
+                      aria-invalid={Boolean(supportFieldErrors.email)}
+                      aria-describedby={supportFieldErrors.email ? 'support-email-error' : undefined}
                     />
+                    <FormFieldError id="support-email-error">{supportFieldErrors.email}</FormFieldError>
                   </label>
                   <label>
                     Loại yêu cầu *
                     <select
                       value={supportForm.loaiYeuCau}
-                      onChange={(event) => setSupportForm({ ...supportForm, loaiYeuCau: event.target.value })}
+                      name="loaiYeuCau"
+                      onChange={(event) => {
+                        setSupportForm({ ...supportForm, loaiYeuCau: event.target.value });
+                        clearFieldError(setSupportFieldErrors, 'loaiYeuCau');
+                      }}
                       required
                     >
                       <option value="QUEN_TEN_DANG_NHAP">Quên tên đăng nhập</option>
@@ -408,11 +510,19 @@ const Login = ({ onLogin }) => {
                   <label>
                     Nội dung mô tả (không bắt buộc)
                     <textarea
+                      name="noiDung"
                       value={supportForm.noiDung}
-                      onChange={(event) => setSupportForm({ ...supportForm, noiDung: event.target.value })}
+                      onChange={(event) => {
+                        setSupportForm({ ...supportForm, noiDung: event.target.value });
+                        clearFieldError(setSupportFieldErrors, 'noiDung');
+                        setSupportError('');
+                      }}
                       maxLength={1000}
                       rows={3}
+                      aria-invalid={Boolean(supportFieldErrors.noiDung)}
+                      aria-describedby={supportFieldErrors.noiDung ? 'support-content-error' : undefined}
                     />
+                    <FormFieldError id="support-content-error">{supportFieldErrors.noiDung}</FormFieldError>
                   </label>
                   <p className="support-privacy-note">
                     Không nhập mật khẩu hoặc mã xác minh. Nếu email đã đăng ký, hãy dùng chức năng khôi phục
@@ -465,12 +575,16 @@ const Login = ({ onLogin }) => {
                   <button className="submit-btn" type="button" onClick={closeRecovery}>Về đăng nhập</button>
                 </div>
               ) : (
-                <form className="support-form recovery-form" onSubmit={handleRecoverySubmit}>
+                <form className="support-form recovery-form" onSubmit={handleRecoverySubmit} noValidate>
                   <label>
                     Loại tài khoản *
                     <select
+                      name="recoveryRole"
                       value={recoveryRole}
-                      onChange={(event) => setRecoveryRole(event.target.value)}
+                      onChange={(event) => {
+                        setRecoveryRole(event.target.value);
+                        clearFieldError(setRecoveryFieldErrors, 'recoveryRole');
+                      }}
                       required
                     >
                       <option value="PHUHUYNH">Phụ huynh</option>
@@ -480,13 +594,21 @@ const Login = ({ onLogin }) => {
                   <label>
                     Email đã đăng ký *
                     <input
+                      name="recoveryEmail"
                       type="email"
                       value={recoveryEmail}
-                      onChange={(event) => setRecoveryEmail(event.target.value)}
+                      onChange={(event) => {
+                        setRecoveryEmail(event.target.value);
+                        clearFieldError(setRecoveryFieldErrors, 'recoveryEmail');
+                        setRecoveryError('');
+                      }}
                       maxLength={100}
                       autoComplete="email"
+                      aria-invalid={Boolean(recoveryFieldErrors.recoveryEmail)}
+                      aria-describedby={recoveryFieldErrors.recoveryEmail ? 'recovery-email-error' : undefined}
                       required
                     />
+                    <FormFieldError id="recovery-email-error">{recoveryFieldErrors.recoveryEmail}</FormFieldError>
                   </label>
                   {recoveryError && <p className="login-error" role="alert">{recoveryError}</p>}
                   <div className="support-form-actions">

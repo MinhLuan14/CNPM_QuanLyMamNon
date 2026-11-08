@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertCircle,
   Baby,
@@ -15,6 +15,8 @@ import {
 import { authRequest, fetchCsrfToken, responseError } from '../../api/auth';
 import { API_BASE_URL } from '../../config';
 import Modal from '../../components/Modal';
+import FormFieldError from '../../components/FormFieldError';
+import { clearFieldError, focusFirstInvalid, requiredText, validateValues } from '../../utils/formValidation';
 
 const STATUS_OPTIONS = ['Đang học', 'Tạm nghỉ', 'Đã nghỉ'];
 const EMPTY_FORM = {
@@ -63,6 +65,9 @@ export default function ChildrenManagement({ onShowToast }) {
   const [busyChildId, setBusyChildId] = useState(null);
   const [loadError, setLoadError] = useState('');
   const [failedRequest, setFailedRequest] = useState(null);
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [imageError, setImageError] = useState('');
+  const saveInProgress = useRef(false);
 
   useEffect(() => () => {
     if (imagePreview.startsWith('blob:')) URL.revokeObjectURL(imagePreview);
@@ -126,7 +131,9 @@ export default function ChildrenManagement({ onShowToast }) {
     setEditingChildId(null);
     setFormData(EMPTY_FORM);
     setImageFile(null);
+    setImageError('');
     setImagePreview(`${API_BASE_URL}/images/default-child.svg`);
+    setFieldErrors({});
     setIsFormModalOpen(true);
   };
 
@@ -141,14 +148,31 @@ export default function ChildrenManagement({ onShowToast }) {
       trangThaiHocTap: child.trangThaiHocTap || 'Đang học',
     });
     setImageFile(null);
+    setImageError('');
     setImagePreview(child.anhDaiDien
       ? `${API_BASE_URL}${child.anhDaiDien}`
       : `${API_BASE_URL}/images/default-child.svg`);
+    setFieldErrors({});
     setIsFormModalOpen(true);
   };
 
   const handleSaveSubmit = async (event) => {
     event.preventDefault();
+    if (saveInProgress.current) return;
+    const today = new Date().toISOString().slice(0, 10);
+    const errors = validateValues(formData, {
+      hoTenDemTre: (value) => requiredText(value, 'Họ và tên đệm'),
+      tenTre: (value) => requiredText(value, 'Tên trẻ'),
+      ngayThangNamSinh: (value) => requiredText(value, 'Ngày sinh')
+        || (value > today ? 'Ngày sinh không được ở trong tương lai.' : ''),
+      noiSinh: (value) => requiredText(value, 'Nơi sinh'),
+    });
+    setFieldErrors(errors);
+    if (Object.keys(errors).length) {
+      focusFirstInvalid(event.currentTarget, errors);
+      return;
+    }
+    saveInProgress.current = true;
     setIsSaving(true);
     try {
       const csrfToken = await fetchCsrfToken();
@@ -195,6 +219,7 @@ export default function ChildrenManagement({ onShowToast }) {
     } catch (error) {
       showToast('error', 'Không thể lưu hồ sơ trẻ', error.message || 'Vui lòng thử lại.');
     } finally {
+      saveInProgress.current = false;
       setIsSaving(false);
     }
   };
@@ -449,13 +474,13 @@ export default function ChildrenManagement({ onShowToast }) {
         footer={
           <div className="modal-buttons">
             <button className="btn-secondary" onClick={() => setIsFormModalOpen(false)} disabled={isSaving}>Hủy</button>
-            <button className="btn-primary" onClick={handleSaveSubmit} disabled={isSaving}>
+            <button className="btn-primary" type="submit" form="child-form" disabled={isSaving}>
               <CheckCircle2 size={16} /> {isSaving ? 'Đang lưu...' : 'Lưu hồ sơ'}
             </button>
           </div>
         }
       >
-        <form onSubmit={handleSaveSubmit} className="modal-form-grid">
+        <form id="child-form" onSubmit={handleSaveSubmit} className="modal-form-grid" noValidate>
           <div className="form-group col-2">
             <label htmlFor="child-avatar">Ảnh đại diện</label>
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
@@ -472,14 +497,21 @@ export default function ChildrenManagement({ onShowToast }) {
                 id="child-avatar"
                 type="file"
                 accept="image/jpeg,image/png,image/webp"
+                aria-invalid={Boolean(imageError)}
+                aria-describedby={imageError ? 'child-avatar-error' : undefined}
                 onChange={(event) => {
                   const file = event.target.files?.[0] || null;
                   if (file && (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)
                     || file.size > 5 * 1024 * 1024)) {
-                    showToast('error', 'Ảnh không hợp lệ', 'Chỉ nhận JPEG, PNG hoặc WebP tối đa 5 MB.');
+                    setImageError('Chỉ nhận ảnh JPEG, PNG hoặc WebP có dung lượng tối đa 5 MB.');
+                    setImageFile(null);
+                    setImagePreview(editingChildId
+                      ? `${API_BASE_URL}/api/tre-em/${editingChildId}/anh-dai-dien`
+                      : `${API_BASE_URL}/images/default-child.svg`);
                     event.target.value = '';
                     return;
                   }
+                  setImageError('');
                   setImageFile(file);
                   setImagePreview(file
                     ? URL.createObjectURL(file)
@@ -490,6 +522,7 @@ export default function ChildrenManagement({ onShowToast }) {
                 }}
               />
             </div>
+            <FormFieldError id="child-avatar-error">{imageError}</FormFieldError>
             <small>JPEG, PNG hoặc WebP; tối đa 5 MB. Ảnh được tải lên khi lưu hồ sơ.</small>
             {imageFile && <small>{imageFile.name} · {(imageFile.size / 1024 / 1024).toFixed(2)} MB</small>}
           </div>
@@ -497,42 +530,70 @@ export default function ChildrenManagement({ onShowToast }) {
             <label htmlFor="child-middle-name">Họ và tên đệm *</label>
             <input
               id="child-middle-name"
+              name="hoTenDemTre"
               maxLength={255}
               value={formData.hoTenDemTre}
-              onChange={(event) => setFormData({ ...formData, hoTenDemTre: event.target.value })}
+              onChange={(event) => {
+                setFormData({ ...formData, hoTenDemTre: event.target.value });
+                clearFieldError(setFieldErrors, 'hoTenDemTre');
+              }}
+              aria-invalid={Boolean(fieldErrors.hoTenDemTre)}
+              aria-describedby={fieldErrors.hoTenDemTre ? 'child-middle-name-error' : undefined}
               required
             />
+            <FormFieldError id="child-middle-name-error">{fieldErrors.hoTenDemTre}</FormFieldError>
           </div>
           <div className="form-group">
             <label htmlFor="child-name">Tên trẻ *</label>
             <input
               id="child-name"
+              name="tenTre"
               maxLength={100}
               value={formData.tenTre}
-              onChange={(event) => setFormData({ ...formData, tenTre: event.target.value })}
+              onChange={(event) => {
+                setFormData({ ...formData, tenTre: event.target.value });
+                clearFieldError(setFieldErrors, 'tenTre');
+              }}
+              aria-invalid={Boolean(fieldErrors.tenTre)}
+              aria-describedby={fieldErrors.tenTre ? 'child-name-error' : undefined}
               required
             />
+            <FormFieldError id="child-name-error">{fieldErrors.tenTre}</FormFieldError>
           </div>
           <div className="form-group">
             <label htmlFor="child-dob">Ngày sinh *</label>
             <input
               id="child-dob"
+              name="ngayThangNamSinh"
               type="date"
               max={new Date().toISOString().slice(0, 10)}
               value={formData.ngayThangNamSinh}
-              onChange={(event) => setFormData({ ...formData, ngayThangNamSinh: event.target.value })}
+              onChange={(event) => {
+                setFormData({ ...formData, ngayThangNamSinh: event.target.value });
+                clearFieldError(setFieldErrors, 'ngayThangNamSinh');
+              }}
+              aria-invalid={Boolean(fieldErrors.ngayThangNamSinh)}
+              aria-describedby={fieldErrors.ngayThangNamSinh ? 'child-dob-error' : undefined}
               required
             />
+            <FormFieldError id="child-dob-error">{fieldErrors.ngayThangNamSinh}</FormFieldError>
           </div>
           <div className="form-group">
             <label htmlFor="child-birthplace">Nơi sinh *</label>
             <input
               id="child-birthplace"
+              name="noiSinh"
               maxLength={100}
               value={formData.noiSinh}
-              onChange={(event) => setFormData({ ...formData, noiSinh: event.target.value })}
+              onChange={(event) => {
+                setFormData({ ...formData, noiSinh: event.target.value });
+                clearFieldError(setFieldErrors, 'noiSinh');
+              }}
+              aria-invalid={Boolean(fieldErrors.noiSinh)}
+              aria-describedby={fieldErrors.noiSinh ? 'child-birthplace-error' : undefined}
               required
             />
+            <FormFieldError id="child-birthplace-error">{fieldErrors.noiSinh}</FormFieldError>
           </div>
           <div className="form-group col-2">
             <label htmlFor="child-class">Lớp học</label>

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     AlertCircle,
     CalendarDays,
@@ -16,6 +16,8 @@ import {
 import { authRequest, responseError } from '../../api/auth';
 import { createInvoice, getInvoices, recordInvoicePayment } from '../../api/hocPhi';
 import Modal from '../../components/Modal';
+import FormFieldError from '../../components/FormFieldError';
+import { clearFieldError, focusFirstInvalid, requiredText, validateValues } from '../../utils/formValidation';
 import './BillingManagement.css';
 
 const FEE_TYPES = ['Học phí', 'Tiền ăn', 'Cơ sở vật chất', 'Môn năng khiếu', 'Khác'];
@@ -134,6 +136,10 @@ export default function BillingManagement({
         hanThanhToan: '',
     });
     const [feeLines, setFeeLines] = useState([emptyLine()]);
+    const [invoiceFieldErrors, setInvoiceFieldErrors] = useState({});
+    const [paymentFieldErrors, setPaymentFieldErrors] = useState({});
+    const invoiceInProgress = useRef(false);
+    const paymentInProgress = useRef(false);
 
     const notify = (type, title, message) => onShowToast?.({ type, title, message });
 
@@ -177,6 +183,7 @@ export default function BillingManagement({
         setTransactionRef('');
         setPaymentNote('');
         setFormError('');
+        setPaymentFieldErrors({});
         setIsPaymentModalOpen(true);
     };
 
@@ -257,21 +264,56 @@ export default function BillingManagement({
 
     const handleCreateInvoice = async (event) => {
         event.preventDefault();
+        if (invoiceInProgress.current) return;
         setFormError('');
+        const values = { ...invoiceForm };
+        const rules = {
+            maTre: (value) => requiredText(value, 'Trẻ cần lập phiếu thu'),
+            thangApDung: (value) => {
+                const month = Number(value);
+                return Number.isInteger(month) && month >= 1 && month <= 12
+                    ? '' : 'Vui lòng chọn tháng áp dụng hợp lệ.';
+            },
+            namApDung: (value) => {
+                const year = Number(value);
+                return Number.isInteger(year) && year >= 2000 && year <= 2100
+                    ? '' : 'Năm áp dụng phải là số nguyên từ 2000 đến 2100.';
+            },
+            hanThanhToan: (value) => requiredText(value, 'Hạn thu'),
+        };
+        feeLines.forEach((line, index) => {
+            values[`feeType${index}`] = line.loaiPhi;
+            values[`feeQuantity${index}`] = line.soLuong;
+            values[`feePrice${index}`] = line.donGia;
+            rules[`feeType${index}`] = (value) => requiredText(value, `Loại phí dòng ${index + 1}`);
+            rules[`feeQuantity${index}`] = (value) => {
+                const quantity = Number(value);
+                return Number.isInteger(quantity) && quantity >= 1
+                    ? '' : `Số lượng dòng ${index + 1} phải là số nguyên từ 1 trở lên.`;
+            };
+            rules[`feePrice${index}`] = (value) => {
+                const price = Number(value);
+                if (!String(value ?? '').trim()) return `Vui lòng nhập đơn giá dòng ${index + 1}.`;
+                if (!/^\d{1,10}(?:\.\d{1,2})?$/.test(String(value).trim())
+                    || !Number.isFinite(price) || price <= 0 || price > 9999999999.99) {
+                    return `Đơn giá dòng ${index + 1} phải lớn hơn 0 và tối đa 2 chữ số thập phân.`;
+                }
+                return '';
+            };
+        });
+        const fieldErrors = validateValues(values, rules);
+        setInvoiceFieldErrors(fieldErrors);
+        if (Object.keys(fieldErrors).length) {
+            focusFirstInvalid(event.currentTarget, fieldErrors);
+            return;
+        }
         const validLines = feeLines.map((line) => ({
             loaiPhi: line.loaiPhi.trim(),
             soLuong: Number(line.soLuong),
             donGia: Number(line.donGia),
             noiDung: line.noiDung.trim() || null,
         }));
-        if (!invoiceForm.maTre || !invoiceForm.hanThanhToan || !validLines.length
-            || feeLines.some((line) => line.donGia === '')
-            || validLines.some((line) => !line.loaiPhi || !Number.isInteger(line.soLuong) || line.soLuong < 1
-                || !Number.isFinite(line.donGia) || line.donGia <= 0 || line.donGia > 9999999999.99)) {
-            setFormError('Vui lòng chọn trẻ, hạn thu và nhập hợp lệ tất cả các dòng phí.');
-            return;
-        }
-
+        invoiceInProgress.current = true;
         setIsSaving(true);
         try {
             await createInvoice({
@@ -288,22 +330,41 @@ export default function BillingManagement({
         } catch (error) {
             setFormError(error.message || 'Không thể lập phiếu thu.');
         } finally {
+            invoiceInProgress.current = false;
             setIsSaving(false);
         }
     };
 
     const handleRecordPayment = async (event) => {
         event.preventDefault();
+        if (paymentInProgress.current) return;
         setFormError('');
-        if (!selectedInvoice || !paymentParentId) {
-            setFormError('Chọn phụ huynh được liên kết với trẻ để ghi nhận thanh toán.');
-            return;
+        const errors = validateValues(
+            { paymentParentId, paymentAmount, paymentMethod },
+            {
+                paymentParentId: (value) => requiredText(value, 'Phụ huynh liên kết'),
+                paymentAmount: (value) => {
+                    const amount = Number(value);
+                    if (!String(value ?? '').trim() || !Number.isFinite(amount) || amount <= 0) {
+                        return 'Số tiền phải lớn hơn 0.';
+                    }
+                    return selectedInvoice && amount !== remainingAmount(selectedInvoice)
+                        ? 'Số tiền phải bằng toàn bộ số dư còn lại.' : '';
+                },
+                paymentMethod: (value) => requiredText(value, 'Phương thức thanh toán'),
+            },
+        );
+        setPaymentFieldErrors(errors);
+        if (!selectedInvoice && !errors.paymentParentId) {
+            errors.paymentParentId = 'Không tìm thấy phiếu thu cần ghi nhận thanh toán.';
+            setPaymentFieldErrors(errors);
         }
-        if (Number(paymentAmount) !== remainingAmount(selectedInvoice)) {
-            setFormError('Với cấu trúc dữ liệu hiện tại, số tiền phải bằng toàn bộ số dư còn lại.');
+        if (Object.keys(errors).length) {
+            focusFirstInvalid(event.currentTarget, errors);
             return;
         }
 
+        paymentInProgress.current = true;
         setIsSaving(true);
         try {
             await recordInvoicePayment(selectedInvoice.maHocPhi, {
@@ -319,6 +380,7 @@ export default function BillingManagement({
         } catch (error) {
             setFormError(error.message || 'Không thể ghi nhận thanh toán.');
         } finally {
+            paymentInProgress.current = false;
             setIsSaving(false);
         }
     };
@@ -400,7 +462,7 @@ export default function BillingManagement({
                 </div>
                 <div className="billing-header-actions">
                     <button className="btn-secondary" type="button" onClick={loadData} disabled={isLoading}><RefreshCw size={16} /> Làm mới</button>
-                    {activeView === 'tuition' && <button className="btn-primary" type="button" onClick={() => { setFormError(''); setIsInvoiceModalOpen(true); }}><FilePlus2 size={17} /> Lập phiếu thu</button>}
+                    {activeView === 'tuition' && <button className="btn-primary" type="button" onClick={() => { setFormError(''); setInvoiceFieldErrors({}); setIsInvoiceModalOpen(true); }}><FilePlus2 size={17} /> Lập phiếu thu</button>}
                 </div>
             </div>
 
@@ -461,19 +523,19 @@ export default function BillingManagement({
                 maxWidth="760px"
                 footer={<div className="modal-buttons"><button className="btn-secondary" type="button" onClick={() => setIsInvoiceModalOpen(false)} disabled={isSaving}>Hủy</button><button className="btn-primary" type="submit" form="billing-invoice-form" disabled={isSaving || !children.length}><CheckCircle2 size={16} /> {isSaving ? 'Đang lưu...' : 'Lưu phiếu thu'}</button></div>}
             >
-                <form id="billing-invoice-form" className="modal-form-grid billing-form" onSubmit={handleCreateInvoice}>
-                    <div className="form-group col-2"><label htmlFor="billing-child">Trẻ *</label><select id="billing-child" required value={invoiceForm.maTre} onChange={(event) => setInvoiceForm({ ...invoiceForm, maTre: event.target.value })}><option value="">Chọn trẻ</option>{children.map((child) => <option key={child.maTre} value={child.maTre}>{childName(child)}{child.tenLopHoc ? ` · ${child.tenLopHoc}` : ''}</option>)}</select></div>
-                    <div className="form-group"><label htmlFor="billing-month">Tháng *</label><select id="billing-month" value={invoiceForm.thangApDung} onChange={(event) => setInvoiceForm({ ...invoiceForm, thangApDung: event.target.value })}>{Array.from({ length: 12 }, (_, index) => index + 1).map((month) => <option key={month} value={month}>Tháng {month}</option>)}</select></div>
-                    <div className="form-group"><label htmlFor="billing-year">Năm *</label><input id="billing-year" type="number" min="2000" max="2100" value={invoiceForm.namApDung} onChange={(event) => setInvoiceForm({ ...invoiceForm, namApDung: event.target.value })} required /></div>
-                    <div className="form-group"><label htmlFor="billing-due">Hạn thu *</label><input id="billing-due" type="date" value={invoiceForm.hanThanhToan} onChange={(event) => setInvoiceForm({ ...invoiceForm, hanThanhToan: event.target.value })} required /></div>
+                <form id="billing-invoice-form" className="modal-form-grid billing-form" onSubmit={handleCreateInvoice} noValidate>
+                    <div className="form-group col-2"><label htmlFor="billing-child">Trẻ *</label><select id="billing-child" name="maTre" required value={invoiceForm.maTre} onChange={(event) => { setInvoiceForm({ ...invoiceForm, maTre: event.target.value }); clearFieldError(setInvoiceFieldErrors, 'maTre'); setFormError(''); }} aria-invalid={Boolean(invoiceFieldErrors.maTre)} aria-describedby={invoiceFieldErrors.maTre ? 'billing-child-error' : undefined}><option value="">Chọn trẻ</option>{children.map((child) => <option key={child.maTre} value={child.maTre}>{childName(child)}{child.tenLopHoc ? ` · ${child.tenLopHoc}` : ''}</option>)}</select><FormFieldError id="billing-child-error">{invoiceFieldErrors.maTre}</FormFieldError></div>
+                    <div className="form-group"><label htmlFor="billing-month">Tháng *</label><select id="billing-month" name="thangApDung" value={invoiceForm.thangApDung} onChange={(event) => { setInvoiceForm({ ...invoiceForm, thangApDung: event.target.value }); clearFieldError(setInvoiceFieldErrors, 'thangApDung'); setFormError(''); }} aria-invalid={Boolean(invoiceFieldErrors.thangApDung)} aria-describedby={invoiceFieldErrors.thangApDung ? 'billing-month-error' : undefined}>{Array.from({ length: 12 }, (_, index) => index + 1).map((month) => <option key={month} value={month}>Tháng {month}</option>)}</select><FormFieldError id="billing-month-error">{invoiceFieldErrors.thangApDung}</FormFieldError></div>
+                    <div className="form-group"><label htmlFor="billing-year">Năm *</label><input id="billing-year" name="namApDung" type="number" min="2000" max="2100" value={invoiceForm.namApDung} onChange={(event) => { setInvoiceForm({ ...invoiceForm, namApDung: event.target.value }); clearFieldError(setInvoiceFieldErrors, 'namApDung'); setFormError(''); }} aria-invalid={Boolean(invoiceFieldErrors.namApDung)} aria-describedby={invoiceFieldErrors.namApDung ? 'billing-year-error' : undefined} required /><FormFieldError id="billing-year-error">{invoiceFieldErrors.namApDung}</FormFieldError></div>
+                    <div className="form-group"><label htmlFor="billing-due">Hạn thu *</label><input id="billing-due" name="hanThanhToan" type="date" value={invoiceForm.hanThanhToan} onChange={(event) => { setInvoiceForm({ ...invoiceForm, hanThanhToan: event.target.value }); clearFieldError(setInvoiceFieldErrors, 'hanThanhToan'); setFormError(''); }} aria-invalid={Boolean(invoiceFieldErrors.hanThanhToan)} aria-describedby={invoiceFieldErrors.hanThanhToan ? 'billing-due-error' : undefined} required /><FormFieldError id="billing-due-error">{invoiceFieldErrors.hanThanhToan}</FormFieldError></div>
                     <div className="billing-line-list col-full">
-                        <div className="billing-line-heading"><strong>Chi tiết khoản thu</strong><button className="btn-secondary" type="button" onClick={() => setFeeLines([...feeLines, emptyLine()])}><FilePlus2 size={15} /> Thêm dòng</button></div>
+                        <div className="billing-line-heading"><strong>Chi tiết khoản thu</strong><button className="btn-secondary" type="button" onClick={() => { setFeeLines([...feeLines, emptyLine()]); setInvoiceFieldErrors({}); }}><FilePlus2 size={15} /> Thêm dòng</button></div>
                         {feeLines.map((line, index) => <div className="billing-line-row" key={`fee-${index}`}>
-                            <label>Loại phí<select value={line.loaiPhi} onChange={(event) => setFeeLines(feeLines.map((item, lineIndex) => lineIndex === index ? { ...item, loaiPhi: event.target.value } : item))}><option value="">Chọn loại phí</option>{FEE_TYPES.map((type) => <option key={type} value={type}>{type}</option>)}</select></label>
-                            <label>Số lượng<input type="number" min="1" step="1" value={line.soLuong} onChange={(event) => setFeeLines(feeLines.map((item, lineIndex) => lineIndex === index ? { ...item, soLuong: event.target.value } : item))} /></label>
-                            <label>Đơn giá (VNĐ)<input type="number" min="0.01" step="0.01" value={line.donGia} onChange={(event) => setFeeLines(feeLines.map((item, lineIndex) => lineIndex === index ? { ...item, donGia: event.target.value } : item))} /></label>
+                            <label>Loại phí<select name={`feeType${index}`} value={line.loaiPhi} onChange={(event) => { setFeeLines(feeLines.map((item, lineIndex) => lineIndex === index ? { ...item, loaiPhi: event.target.value } : item)); clearFieldError(setInvoiceFieldErrors, `feeType${index}`); }} aria-invalid={Boolean(invoiceFieldErrors[`feeType${index}`])} aria-describedby={invoiceFieldErrors[`feeType${index}`] ? `billing-fee-type-${index}-error` : undefined}><option value="">Chọn loại phí</option>{FEE_TYPES.map((type) => <option key={type} value={type}>{type}</option>)}</select><FormFieldError id={`billing-fee-type-${index}-error`}>{invoiceFieldErrors[`feeType${index}`]}</FormFieldError></label>
+                            <label>Số lượng<input name={`feeQuantity${index}`} type="number" min="1" step="1" value={line.soLuong} onChange={(event) => { setFeeLines(feeLines.map((item, lineIndex) => lineIndex === index ? { ...item, soLuong: event.target.value } : item)); clearFieldError(setInvoiceFieldErrors, `feeQuantity${index}`); }} aria-invalid={Boolean(invoiceFieldErrors[`feeQuantity${index}`])} aria-describedby={invoiceFieldErrors[`feeQuantity${index}`] ? `billing-fee-quantity-${index}-error` : undefined} /><FormFieldError id={`billing-fee-quantity-${index}-error`}>{invoiceFieldErrors[`feeQuantity${index}`]}</FormFieldError></label>
+                            <label>Đơn giá (VNĐ)<input name={`feePrice${index}`} type="number" min="0.01" step="0.01" value={line.donGia} onChange={(event) => { setFeeLines(feeLines.map((item, lineIndex) => lineIndex === index ? { ...item, donGia: event.target.value } : item)); clearFieldError(setInvoiceFieldErrors, `feePrice${index}`); }} aria-invalid={Boolean(invoiceFieldErrors[`feePrice${index}`])} aria-describedby={invoiceFieldErrors[`feePrice${index}`] ? `billing-fee-price-${index}-error` : undefined} /><FormFieldError id={`billing-fee-price-${index}-error`}>{invoiceFieldErrors[`feePrice${index}`]}</FormFieldError></label>
                             <label>Nội dung<input value={line.noiDung} maxLength="255" onChange={(event) => setFeeLines(feeLines.map((item, lineIndex) => lineIndex === index ? { ...item, noiDung: event.target.value } : item))} /></label>
-                            <button type="button" className="btn-tbl delete" title="Xóa dòng phí" aria-label="Xóa dòng phí" disabled={feeLines.length === 1} onClick={() => setFeeLines(feeLines.filter((_, lineIndex) => lineIndex !== index))}><X size={15} /></button>
+                            <button type="button" className="btn-tbl delete" title="Xóa dòng phí" aria-label="Xóa dòng phí" disabled={feeLines.length === 1} onClick={() => { setFeeLines(feeLines.filter((_, lineIndex) => lineIndex !== index)); setInvoiceFieldErrors({}); }}><X size={15} /></button>
                         </div>)}
                     </div>
                     {formError && <div className="billing-error col-full" role="alert">{formError}</div>}
@@ -493,11 +555,11 @@ export default function BillingManagement({
             </Modal>
 
             <Modal isOpen={isPaymentModalOpen && Boolean(selectedInvoice)} onClose={() => { if (!isSaving) setIsPaymentModalOpen(false); }} title={`Ghi nhận thanh toán HP-${selectedInvoice?.maHocPhi ?? ''}`} maxWidth="560px" footer={<div className="modal-buttons"><button className="btn-secondary" type="button" onClick={() => setIsPaymentModalOpen(false)} disabled={isSaving}>Hủy</button><button className="btn-primary" type="submit" form="billing-payment-form" disabled={isSaving || !selectedInvoice?.phuHuynhLienKet?.length}><CheckCircle2 size={16} /> {isSaving ? 'Đang xác nhận...' : 'Xác nhận đã nhận tiền'}</button></div>}>
-                <form id="billing-payment-form" className="modal-form-grid billing-form" onSubmit={handleRecordPayment}>
+                <form id="billing-payment-form" className="modal-form-grid billing-form" onSubmit={handleRecordPayment} noValidate>
                     <div className="billing-notice col-full"><AlertCircle size={16} /> Chỉ xác nhận sau khi nhà trường thực tế nhận được khoản tiền. Không tạo thanh toán QR hoặc ví điện tử tự động.</div>
-                    <div className="form-group col-2"><label htmlFor="billing-parent">Phụ huynh liên kết *</label><select id="billing-parent" required value={paymentParentId} onChange={(event) => setPaymentParentId(event.target.value)}><option value="">Chọn phụ huynh</option>{(selectedInvoice?.phuHuynhLienKet || []).map((parent) => <option key={parent.maPhuHuynh} value={parent.maPhuHuynh}>{parent.hoTen}{parent.quanHe ? ` · ${parent.quanHe}` : ''}</option>)}</select>{!selectedInvoice?.phuHuynhLienKet?.length && <small>Trẻ chưa có phụ huynh liên kết trong dữ liệu.</small>}</div>
-                    <div className="form-group"><label htmlFor="billing-pay-amount">Số tiền còn lại</label><input id="billing-pay-amount" type="number" min="0.01" step="0.01" required value={paymentAmount} onChange={(event) => setPaymentAmount(event.target.value)} /></div>
-                    <div className="form-group"><label htmlFor="billing-pay-method">Phương thức *</label><select id="billing-pay-method" value={paymentMethod} onChange={(event) => setPaymentMethod(event.target.value)}><option>Tiền mặt</option><option>Chuyển khoản</option></select></div>
+                    <div className="form-group col-2"><label htmlFor="billing-parent">Phụ huynh liên kết *</label><select id="billing-parent" name="paymentParentId" required value={paymentParentId} onChange={(event) => { setPaymentParentId(event.target.value); clearFieldError(setPaymentFieldErrors, 'paymentParentId'); setFormError(''); }} aria-invalid={Boolean(paymentFieldErrors.paymentParentId)} aria-describedby={paymentFieldErrors.paymentParentId ? 'billing-parent-error' : undefined}><option value="">Chọn phụ huynh</option>{(selectedInvoice?.phuHuynhLienKet || []).map((parent) => <option key={parent.maPhuHuynh} value={parent.maPhuHuynh}>{parent.hoTen}{parent.quanHe ? ` · ${parent.quanHe}` : ''}</option>)}</select><FormFieldError id="billing-parent-error">{paymentFieldErrors.paymentParentId}</FormFieldError>{!selectedInvoice?.phuHuynhLienKet?.length && <small>Trẻ chưa có phụ huynh liên kết trong dữ liệu.</small>}</div>
+                    <div className="form-group"><label htmlFor="billing-pay-amount">Số tiền còn lại</label><input id="billing-pay-amount" name="paymentAmount" type="number" min="0.01" step="0.01" required value={paymentAmount} onChange={(event) => { setPaymentAmount(event.target.value); clearFieldError(setPaymentFieldErrors, 'paymentAmount'); setFormError(''); }} aria-invalid={Boolean(paymentFieldErrors.paymentAmount)} aria-describedby={paymentFieldErrors.paymentAmount ? 'billing-amount-error' : undefined} /><FormFieldError id="billing-amount-error">{paymentFieldErrors.paymentAmount}</FormFieldError></div>
+                    <div className="form-group"><label htmlFor="billing-pay-method">Phương thức *</label><select id="billing-pay-method" name="paymentMethod" value={paymentMethod} onChange={(event) => { setPaymentMethod(event.target.value); clearFieldError(setPaymentFieldErrors, 'paymentMethod'); setFormError(''); }} aria-invalid={Boolean(paymentFieldErrors.paymentMethod)} aria-describedby={paymentFieldErrors.paymentMethod ? 'billing-method-error' : undefined}><option>Tiền mặt</option><option>Chuyển khoản</option></select><FormFieldError id="billing-method-error">{paymentFieldErrors.paymentMethod}</FormFieldError></div>
                     <div className="form-group col-2"><label htmlFor="billing-reference">Mã giao dịch (nếu có)</label><input id="billing-reference" maxLength="100" value={transactionRef} onChange={(event) => setTransactionRef(event.target.value)} /></div>
                     <div className="form-group col-2"><label htmlFor="billing-payment-note">Ghi chú</label><input id="billing-payment-note" maxLength="255" value={paymentNote} onChange={(event) => setPaymentNote(event.target.value)} /></div>
                     {formError && <div className="billing-error col-full" role="alert">{formError}</div>}

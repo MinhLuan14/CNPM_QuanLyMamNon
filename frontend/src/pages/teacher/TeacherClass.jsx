@@ -5,13 +5,6 @@ export default function TeacherClass({ data }) {
 
   return (
     <div className="teacher-page">
-      <div className="teacher-page-heading">
-        <div>
-          <span className="teacher-eyebrow">KHÔNG GIAN LỚP HỌC</span>
-          <h2>Lớp học của tôi</h2>
-          <p>Thông tin lớp và những nội dung cần thiết cho công việc giảng dạy.</p>
-        </div>
-      </div>
       {classroom ? (
         <>
           <section className="teacher-panel">

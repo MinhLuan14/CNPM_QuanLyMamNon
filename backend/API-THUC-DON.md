@@ -1,6 +1,6 @@
 # API quản lý thực đơn dinh dưỡng
 
-Base URL: `http://localhost:8888`. Các API trong tài liệu này chỉ dành cho `ADMIN`. Request thay đổi dữ liệu cần cookie phiên đăng nhập và CSRF header `X-XSRF-TOKEN`; xem phần thiết lập Postman trong [API-PHU-HUYNH-TRE.md](./API-PHU-HUYNH-TRE.md#thiết-lập-postman).
+Base URL: `http://localhost:8888`. Các API quản lý trong tài liệu này chỉ dành cho `ADMIN`; request thay đổi dữ liệu cần cookie phiên đăng nhập và CSRF header `X-XSRF-TOKEN`; xem phần thiết lập Postman trong [API-PHU-HUYNH-TRE.md](./API-PHU-HUYNH-TRE.md#thiết-lập-postman).
 
 ## Schema hiện dùng
 
@@ -22,6 +22,20 @@ Không có migration hoặc thay đổi schema trong chức năng này. `tuanApD
 - `POST /api/thuc-don/{maThucDon}/chi-tiet` — thêm món vào ngày/bữa; trả `201`.
 - `PUT /api/thuc-don/{maThucDon}/chi-tiet/{maChiTietThucDon}` — sửa món/ngày/bữa/đơn giá/ghi chú.
 - `DELETE /api/thuc-don/{maThucDon}/chi-tiet/{maChiTietThucDon}` — xóa một món khỏi thực đơn.
+
+Thực đơn đang công khai không thể bị xóa (`409`). Có thể ngừng công khai trước; thực đơn còn chi tiết vẫn phải gỡ từng món trước khi xóa. Khi cập nhật khoảng ngày, backend từ chối nếu các món đã lưu sẽ nằm ngoài thời gian mới (`409`).
+
+## API phụ huynh
+
+- `GET /api/phu-huynh/thuc-don?maTre={maTre}` — chỉ dành cho vai trò `PHUHUYNH`; xác thực trẻ thuộc tài khoản đang đăng nhập qua `PHUHUYNH_TRE`, rồi trả danh sách thực đơn đang công khai (`trangThai=true`) kèm các món đã xếp lịch. Trẻ không liên kết trả `404`. Phản hồi có `Cache-Control: no-store`.
+
+Endpoint quản lý `GET /api/thuc-don` vẫn chỉ dành cho `ADMIN` và không được dùng từ cổng phụ huynh vì danh sách đó có thể bao gồm thực đơn nháp.
+
+## API giáo viên
+
+- `GET /api/giao-vien/thuc-don?maLopHoc={maLopHoc}` — chỉ dành cho vai trò `GIAOVIEN`; kiểm tra hồ sơ từ tài khoản đăng nhập và xác thực rằng lớp đang được phân công hiện tại trong `PHANCONG_GIAOVIEN`. Lớp không được phân công trả `404`. Phản hồi có `Cache-Control: no-store`.
+
+Schema hiện tại không liên kết `THUCDON` với một lớp cụ thể. Vì vậy, khi đã xác thực phạm vi phân công, giáo viên và phụ huynh cùng xem nguồn thực đơn công khai toàn trường; API không tạo hoặc lọc theo dữ liệu lớp học giả định.
 
 Tạo/cập nhật thực đơn:
 
@@ -48,7 +62,7 @@ Tạo/cập nhật chi tiết:
 }
 ```
 
-Món trùng trong cùng ngày và cùng bữa bị từ chối (`409`). Chỉ món `trangThai=true` có thể thêm vào thực đơn. Ngày ăn phải nằm trong thời hạn thực đơn. `donGia` của chi tiết luôn được backend lấy từ `MONAN.donGia`; giá gửi kèm từ client (nếu có ở client cũ) bị bỏ qua. Nếu món chưa có đơn giá, API trả `409`. Khi đổi món trong chi tiết, backend lấy giá hiện hành của món mới; khi chỉ sửa ngày/bữa/ghi chú mà giữ nguyên món, giá đã lưu trong chi tiết được giữ nguyên.
+Món trùng trong cùng ngày và cùng bữa bị từ chối (`409`); hai thực đơn có tuần giống nhau hoặc khoảng ngày chồng lấn cũng bị từ chối (`409`). Chỉ món `trangThai=true` có thể thêm vào thực đơn. Ngày ăn phải nằm trong thời hạn thực đơn. `donGia` của chi tiết luôn được backend lấy từ `MONAN.donGia`; giá gửi kèm từ client (nếu có ở client cũ) bị bỏ qua. Nếu món chưa có đơn giá, API trả `409`. Khi đổi món trong chi tiết, backend lấy giá hiện hành của món mới; khi chỉ sửa ngày/bữa/ghi chú mà giữ nguyên món, giá đã lưu trong chi tiết được giữ nguyên.
 
 ## Danh mục món ăn
 

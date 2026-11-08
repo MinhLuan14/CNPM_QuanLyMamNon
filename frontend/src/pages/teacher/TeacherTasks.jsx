@@ -13,13 +13,6 @@ export default function TeacherTasks({ tasks: initialTasks, isAvailable = true }
 
   return (
     <div className="teacher-page">
-      <div className="teacher-page-heading">
-        <div>
-          <span className="teacher-eyebrow">KẾ HOẠCH CỦA GIÁO VIÊN</span>
-          <h2>Công việc & báo cáo</h2>
-          <p>Đánh dấu tiến độ để xem thử trải nghiệm cập nhật công việc (chỉ lưu trong phiên).</p>
-        </div>
-      </div>
       <section className="teacher-panel">
         <div className="teacher-panel-heading">
           <div><ClipboardList size={19} /><h3>Công việc được giao</h3></div>

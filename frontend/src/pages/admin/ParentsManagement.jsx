@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertCircle,
   Baby,
@@ -15,6 +15,8 @@ import {
 } from 'lucide-react';
 import { authRequest, fetchCsrfToken, responseError } from '../../api/auth';
 import Modal from '../../components/Modal';
+import FormFieldError from '../../components/FormFieldError';
+import { clearFieldError, focusFirstInvalid, requiredText, validEmail, validVietnamesePhone, validateValues } from '../../utils/formValidation';
 
 const EMPTY_FORM = {
   hoTenDemPH: '',
@@ -66,6 +68,13 @@ export default function ParentsManagement({ onShowToast, canManageLinks = false 
   const [isSaving, setIsSaving] = useState(false);
   const [busyParentId, setBusyParentId] = useState(null);
   const [loadError, setLoadError] = useState('');
+  const [createFieldErrors, setCreateFieldErrors] = useState({});
+  const [editFieldErrors, setEditFieldErrors] = useState({});
+  const [linkFieldErrors, setLinkFieldErrors] = useState({});
+  const [replacementErrors, setReplacementErrors] = useState({});
+  const createInProgress = useRef(false);
+  const editInProgress = useRef(false);
+  const linkInProgress = useRef(false);
 
   const showToast = (type, title, message) => {
     onShowToast?.({ type, title, message });
@@ -121,11 +130,28 @@ export default function ParentsManagement({ onShowToast, canManageLinks = false 
 
   const openAddModal = () => {
     setForm(EMPTY_FORM);
+    setCreateFieldErrors({});
     setIsAddModalOpen(true);
   };
 
   const handleAddSubmit = async (event) => {
     event.preventDefault();
+    if (createInProgress.current) return;
+    const errors = validateValues(form, {
+      hoTenDemPH: (value) => requiredText(value, 'Họ và tên đệm'),
+      tenPH: (value) => requiredText(value, 'Tên phụ huynh'),
+      soDienThoai: (value) => requiredText(value, 'Số điện thoại') || validVietnamesePhone(value),
+      email: (value) => validEmail(value, true),
+      diaChiLH: (value) => requiredText(value, 'Địa chỉ liên hệ'),
+      maTre: (value, values) => value && !values.quanHe
+        ? 'Vui lòng chọn mối quan hệ với trẻ.' : '',
+    });
+    setCreateFieldErrors(errors);
+    if (Object.keys(errors).length) {
+      focusFirstInvalid(event.currentTarget, errors);
+      return;
+    }
+    createInProgress.current = true;
     setIsSaving(true);
 
     try {
@@ -161,6 +187,7 @@ export default function ParentsManagement({ onShowToast, canManageLinks = false 
     } catch (error) {
       showToast('error', 'Không thể tạo phụ huynh', error.message || 'Vui lòng thử lại.');
     } finally {
+      createInProgress.current = false;
       setIsSaving(false);
     }
   };
@@ -220,7 +247,10 @@ export default function ParentsManagement({ onShowToast, canManageLinks = false 
     }
   };
 
-  const updateForm = (field, value) => setForm((current) => ({ ...current, [field]: value }));
+  const updateForm = (field, value) => {
+    setForm((current) => ({ ...current, [field]: value }));
+    clearFieldError(setCreateFieldErrors, field);
+  };
 
   const loadParentDetails = async (maPhuHuynh) => {
     const response = await authRequest(`/api/phu-huynh/${maPhuHuynh}/thong-tin-lien-ket`);
@@ -242,6 +272,7 @@ export default function ParentsManagement({ onShowToast, canManageLinks = false 
   const handleOpenEdit = async (maPhuHuynh) => {
     setBusyParentId(maPhuHuynh);
     setEditError('');
+    setEditFieldErrors({});
     try {
       const details = await loadParentDetails(maPhuHuynh);
       setEditingParent(details);
@@ -262,6 +293,20 @@ export default function ParentsManagement({ onShowToast, canManageLinks = false 
   const handleEditSubmit = async (event) => {
     event.preventDefault();
     if (!editingParent || !editForm) return;
+    if (editInProgress.current) return;
+    const errors = validateValues(editForm, {
+      hoTenDemPH: (value) => requiredText(value, 'Họ và tên đệm'),
+      tenPH: (value) => requiredText(value, 'Tên phụ huynh'),
+      soDienThoai: (value) => requiredText(value, 'Số điện thoại') || validVietnamesePhone(value),
+      email: (value) => validEmail(value, true),
+      diaChiLH: (value) => requiredText(value, 'Địa chỉ liên hệ'),
+    });
+    setEditFieldErrors(errors);
+    if (Object.keys(errors).length) {
+      focusFirstInvalid(event.currentTarget, errors);
+      return;
+    }
+    editInProgress.current = true;
     setEditError('');
     setIsSaving(true);
     try {
@@ -290,6 +335,7 @@ export default function ParentsManagement({ onShowToast, canManageLinks = false 
     } catch (error) {
       setEditError(error.message || 'Không thể cập nhật hồ sơ. Vui lòng kiểm tra lại dữ liệu.');
     } finally {
+      editInProgress.current = false;
       setIsSaving(false);
     }
   };
@@ -299,11 +345,13 @@ export default function ParentsManagement({ onShowToast, canManageLinks = false 
     setEditingParent(null);
     setEditForm(null);
     setEditError('');
+    setEditFieldErrors({});
   };
 
   const updateEditForm = (field, value) => {
     setEditForm((current) => ({ ...current, [field]: value }));
     setEditError('');
+    clearFieldError(setEditFieldErrors, field);
   };
 
   const refreshParentDetails = async (maPhuHuynh) => {
@@ -314,7 +362,17 @@ export default function ParentsManagement({ onShowToast, canManageLinks = false 
 
   const createParentChildLink = async (event) => {
     event.preventDefault();
-    if (!parentDetails || !linkForm.maTre) return;
+    if (!parentDetails || linkInProgress.current) return;
+    const errors = validateValues(linkForm, {
+      maTre: (value) => requiredText(value, 'Trẻ cần liên kết'),
+      quanHe: (value) => requiredText(value, 'Mối quan hệ'),
+    });
+    setLinkFieldErrors(errors);
+    if (Object.keys(errors).length) {
+      focusFirstInvalid(event.currentTarget, errors);
+      return;
+    }
+    linkInProgress.current = true;
     setIsLinkSaving(true);
     setLinkError('');
     try {
@@ -331,10 +389,12 @@ export default function ParentsManagement({ onShowToast, canManageLinks = false 
       await readResponse(response, 'Không thể liên kết trẻ với phụ huynh.');
       await refreshParentDetails(parentDetails.phuHuynh.maPhuHuynh);
       setLinkForm({ maTre: '', quanHe: 'Bố' });
+      setLinkFieldErrors({});
       showToast('success', 'Đã liên kết trẻ', 'Liên kết phụ huynh và trẻ đã được tạo.');
     } catch (error) {
       setLinkError(error.message || 'Không thể liên kết trẻ. Vui lòng thử lại.');
     } finally {
+      linkInProgress.current = false;
       setIsLinkSaving(false);
     }
   };
@@ -343,9 +403,19 @@ export default function ParentsManagement({ onShowToast, canManageLinks = false 
     if (!parentDetails) return;
     const replacementId = replacementByChild[child.maTre];
     if (!replacementId) {
-      setLinkError('Hãy chọn trẻ mới cần liên kết.');
+      setReplacementErrors((current) => ({ ...current, [child.maTre]: 'Vui lòng chọn trẻ mới cần liên kết.' }));
+      const field = document.getElementById(`replacement-child-${child.maTre}`);
+      field?.focus();
+      field?.scrollIntoView?.({ block: 'center', behavior: 'smooth' });
       return;
     }
+    if (linkInProgress.current) return;
+    linkInProgress.current = true;
+    setReplacementErrors((current) => {
+      const next = { ...current };
+      delete next[child.maTre];
+      return next;
+    });
     const parentId = parentDetails.phuHuynh.maPhuHuynh;
     setIsLinkSaving(true);
     setLinkError('');
@@ -373,6 +443,7 @@ export default function ParentsManagement({ onShowToast, canManageLinks = false 
     } catch (error) {
       setLinkError(error.message || 'Không thể đổi trẻ liên kết. Dữ liệu cũ vẫn được giữ.');
     } finally {
+      linkInProgress.current = false;
       setIsLinkSaving(false);
     }
   };
@@ -591,57 +662,77 @@ export default function ParentsManagement({ onShowToast, canManageLinks = false 
           </div>
         )}
       >
-        <form id="parent-create-form" onSubmit={handleAddSubmit} className="modal-form-grid">
+        <form id="parent-create-form" onSubmit={handleAddSubmit} className="modal-form-grid" noValidate>
           <div className="form-group col-2">
             <label>Họ và tên đệm *</label>
             <input
+              name="hoTenDemPH"
               type="text"
               value={form.hoTenDemPH}
               onChange={(event) => updateForm('hoTenDemPH', event.target.value)}
               maxLength={255}
+              aria-invalid={Boolean(createFieldErrors.hoTenDemPH)}
+              aria-describedby={createFieldErrors.hoTenDemPH ? 'parent-create-middle-error' : undefined}
               required
             />
+            <FormFieldError id="parent-create-middle-error">{createFieldErrors.hoTenDemPH}</FormFieldError>
           </div>
           <div className="form-group col-2">
             <label>Tên *</label>
             <input
+              name="tenPH"
               type="text"
               value={form.tenPH}
               onChange={(event) => updateForm('tenPH', event.target.value)}
               maxLength={100}
+              aria-invalid={Boolean(createFieldErrors.tenPH)}
+              aria-describedby={createFieldErrors.tenPH ? 'parent-create-name-error' : undefined}
               required
             />
+            <FormFieldError id="parent-create-name-error">{createFieldErrors.tenPH}</FormFieldError>
           </div>
           <div className="form-group">
             <label>Số điện thoại *</label>
             <input
+              name="soDienThoai"
               type="tel"
               inputMode="numeric"
               pattern="[0-9]{10}"
               maxLength={10}
               value={form.soDienThoai}
               onChange={(event) => updateForm('soDienThoai', event.target.value)}
+              aria-invalid={Boolean(createFieldErrors.soDienThoai)}
+              aria-describedby={createFieldErrors.soDienThoai ? 'parent-create-phone-error' : undefined}
               required
             />
+            <FormFieldError id="parent-create-phone-error">{createFieldErrors.soDienThoai}</FormFieldError>
           </div>
           <div className="form-group">
             <label>Email</label>
             <input
+              name="email"
               type="email"
               maxLength={100}
               value={form.email}
               onChange={(event) => updateForm('email', event.target.value)}
+              aria-invalid={Boolean(createFieldErrors.email)}
+              aria-describedby={createFieldErrors.email ? 'parent-create-email-error' : undefined}
             />
+            <FormFieldError id="parent-create-email-error">{createFieldErrors.email}</FormFieldError>
           </div>
           <div className="form-group col-2">
             <label>Địa chỉ liên hệ *</label>
             <input
+              name="diaChiLH"
               type="text"
               maxLength={255}
               value={form.diaChiLH}
               onChange={(event) => updateForm('diaChiLH', event.target.value)}
+              aria-invalid={Boolean(createFieldErrors.diaChiLH)}
+              aria-describedby={createFieldErrors.diaChiLH ? 'parent-create-address-error' : undefined}
               required
             />
+            <FormFieldError id="parent-create-address-error">{createFieldErrors.diaChiLH}</FormFieldError>
           </div>
 
           <div className="form-group col-full">
@@ -659,7 +750,7 @@ export default function ParentsManagement({ onShowToast, canManageLinks = false 
           <div className="form-divider col-full"><span>Liên kết với trẻ (không bắt buộc)</span></div>
           <div className="form-group">
             <label>Chọn trẻ</label>
-            <select value={form.maTre} onChange={(event) => updateForm('maTre', event.target.value)}>
+            <select name="maTre" value={form.maTre} onChange={(event) => updateForm('maTre', event.target.value)} aria-invalid={Boolean(createFieldErrors.maTre)} aria-describedby={createFieldErrors.maTre ? 'parent-create-child-error' : undefined}>
               <option value="">Chưa liên kết</option>
               {children.map((child) => (
                 <option key={child.maTre} value={child.maTre}>
@@ -667,13 +758,17 @@ export default function ParentsManagement({ onShowToast, canManageLinks = false 
                 </option>
               ))}
             </select>
+            <FormFieldError id="parent-create-child-error">{createFieldErrors.maTre}</FormFieldError>
           </div>
           <div className="form-group">
             <label>Mối quan hệ với trẻ</label>
             <select
+              name="quanHe"
               value={form.quanHe}
               onChange={(event) => updateForm('quanHe', event.target.value)}
               disabled={!form.maTre}
+              aria-invalid={Boolean(createFieldErrors.quanHe)}
+              aria-describedby={createFieldErrors.quanHe ? 'parent-create-relationship-error' : undefined}
             >
               <option value="Bố">Bố</option>
               <option value="Mẹ">Mẹ</option>
@@ -681,6 +776,7 @@ export default function ParentsManagement({ onShowToast, canManageLinks = false 
               <option value="Bà">Bà</option>
               <option value="Người giám hộ">Người giám hộ</option>
             </select>
+            <FormFieldError id="parent-create-relationship-error">{createFieldErrors.quanHe}</FormFieldError>
           </div>
         </form>
       </Modal>
@@ -702,7 +798,7 @@ export default function ParentsManagement({ onShowToast, canManageLinks = false 
         )}
       >
         {editingParent && editForm && (
-          <form id="parent-edit-form" className="modal-form-grid" onSubmit={handleEditSubmit}>
+          <form id="parent-edit-form" className="modal-form-grid" onSubmit={handleEditSubmit} noValidate>
             <div className="form-group col-full">
               <label>Mã phụ huynh</label>
               <input value={editingParent.phuHuynh.maPhuHuynh} readOnly />
@@ -710,24 +806,33 @@ export default function ParentsManagement({ onShowToast, canManageLinks = false 
             <div className="form-group col-2">
               <label>Họ tên đệm *</label>
               <input
+                name="hoTenDemPH"
                 value={editForm.hoTenDemPH}
                 onChange={(event) => updateEditForm('hoTenDemPH', event.target.value)}
                 maxLength={255}
+                aria-invalid={Boolean(editFieldErrors.hoTenDemPH)}
+                aria-describedby={editFieldErrors.hoTenDemPH ? 'parent-edit-middle-error' : undefined}
                 required
               />
+              <FormFieldError id="parent-edit-middle-error">{editFieldErrors.hoTenDemPH}</FormFieldError>
             </div>
             <div className="form-group col-2">
               <label>Tên phụ huynh *</label>
               <input
+                name="tenPH"
                 value={editForm.tenPH}
                 onChange={(event) => updateEditForm('tenPH', event.target.value)}
                 maxLength={100}
+                aria-invalid={Boolean(editFieldErrors.tenPH)}
+                aria-describedby={editFieldErrors.tenPH ? 'parent-edit-name-error' : undefined}
                 required
               />
+              <FormFieldError id="parent-edit-name-error">{editFieldErrors.tenPH}</FormFieldError>
             </div>
             <div className="form-group">
               <label>Số điện thoại *</label>
               <input
+                name="soDienThoai"
                 type="tel"
                 inputMode="numeric"
                 pattern="[0-9]{10}"
@@ -735,27 +840,36 @@ export default function ParentsManagement({ onShowToast, canManageLinks = false 
                 value={editForm.soDienThoai}
                 onChange={(event) => updateEditForm('soDienThoai', event.target.value)}
                 required
-                aria-describedby={editError ? 'parent-edit-error' : undefined}
+                aria-invalid={Boolean(editFieldErrors.soDienThoai)}
+                aria-describedby={editFieldErrors.soDienThoai ? 'parent-edit-phone-error' : undefined}
               />
+              <FormFieldError id="parent-edit-phone-error">{editFieldErrors.soDienThoai}</FormFieldError>
             </div>
             <div className="form-group">
               <label>Email</label>
               <input
+                name="email"
                 type="email"
                 maxLength={100}
                 value={editForm.email}
                 onChange={(event) => updateEditForm('email', event.target.value)}
-                aria-describedby={editError ? 'parent-edit-error' : undefined}
+                aria-invalid={Boolean(editFieldErrors.email)}
+                aria-describedby={editFieldErrors.email ? 'parent-edit-email-error' : undefined}
               />
+              <FormFieldError id="parent-edit-email-error">{editFieldErrors.email}</FormFieldError>
             </div>
             <div className="form-group col-full">
               <label>Địa chỉ liên hệ *</label>
               <input
+                name="diaChiLH"
                 value={editForm.diaChiLH}
                 onChange={(event) => updateEditForm('diaChiLH', event.target.value)}
                 maxLength={255}
+                aria-invalid={Boolean(editFieldErrors.diaChiLH)}
+                aria-describedby={editFieldErrors.diaChiLH ? 'parent-edit-address-error' : undefined}
                 required
               />
+              <FormFieldError id="parent-edit-address-error">{editFieldErrors.diaChiLH}</FormFieldError>
             </div>
             {editError && <p id="parent-edit-error" className="login-error col-full" role="alert">{editError}</p>}
           </form>
@@ -807,13 +921,23 @@ export default function ParentsManagement({ onShowToast, canManageLinks = false 
                       </div>
                       {canManageLinks && <div className="parent-link-actions">
                         <select
+                          id={`replacement-child-${child.maTre}`}
                           aria-label={`Chọn trẻ thay cho ${getChildName(child)}`}
                           value={replacementByChild[child.maTre] || ''}
                           disabled={isLinkSaving}
-                          onChange={(event) => setReplacementByChild((current) => ({
-                            ...current,
-                            [child.maTre]: event.target.value,
-                          }))}
+                          aria-invalid={Boolean(replacementErrors[child.maTre])}
+                          aria-describedby={replacementErrors[child.maTre] ? `replacement-child-${child.maTre}-error` : undefined}
+                          onChange={(event) => {
+                            setReplacementByChild((current) => ({
+                              ...current,
+                              [child.maTre]: event.target.value,
+                            }));
+                            setReplacementErrors((current) => {
+                              const next = { ...current };
+                              delete next[child.maTre];
+                              return next;
+                            });
+                          }}
                         >
                           <option value="">Chọn trẻ để đổi liên kết</option>
                           {children
@@ -827,10 +951,13 @@ export default function ParentsManagement({ onShowToast, canManageLinks = false 
                               </option>
                             ))}
                         </select>
+                        <FormFieldError id={`replacement-child-${child.maTre}-error`}>
+                          {replacementErrors[child.maTre]}
+                        </FormFieldError>
                         <button
                           type="button"
                           className="btn-secondary"
-                          disabled={isLinkSaving || !replacementByChild[child.maTre]}
+                          disabled={isLinkSaving}
                           onClick={() => replaceLinkedChild(child)}
                         >
                           Đổi trẻ
@@ -849,13 +976,19 @@ export default function ParentsManagement({ onShowToast, canManageLinks = false 
                 </div>
               ) : <p className="text-muted">Chưa có trẻ em được liên kết.</p>}
             </div>
-            {canManageLinks && <form className="form-group col-full" onSubmit={createParentChildLink}>
+            {canManageLinks && <form className="form-group col-full" onSubmit={createParentChildLink} noValidate>
               <label>Liên kết thêm trẻ</label>
               <div className="parent-link-actions">
                 <select
+                  name="maTre"
                   value={linkForm.maTre}
                   disabled={isLinkSaving}
-                  onChange={(event) => setLinkForm((current) => ({ ...current, maTre: event.target.value }))}
+                  onChange={(event) => {
+                    setLinkForm((current) => ({ ...current, maTre: event.target.value }));
+                    clearFieldError(setLinkFieldErrors, 'maTre');
+                  }}
+                  aria-invalid={Boolean(linkFieldErrors.maTre)}
+                  aria-describedby={linkFieldErrors.maTre ? 'parent-link-child-error' : undefined}
                   required
                 >
                   <option value="">Chọn trẻ chưa liên kết</option>
@@ -865,11 +998,18 @@ export default function ParentsManagement({ onShowToast, canManageLinks = false 
                       <option key={option.maTre} value={option.maTre}>{getChildName(option)}</option>
                     ))}
                 </select>
+                <FormFieldError id="parent-link-child-error">{linkFieldErrors.maTre}</FormFieldError>
                 <select
+                  name="quanHe"
                   value={linkForm.quanHe}
                   disabled={isLinkSaving}
-                  onChange={(event) => setLinkForm((current) => ({ ...current, quanHe: event.target.value }))}
+                  onChange={(event) => {
+                    setLinkForm((current) => ({ ...current, quanHe: event.target.value }));
+                    clearFieldError(setLinkFieldErrors, 'quanHe');
+                  }}
                   aria-label="Mối quan hệ với trẻ"
+                  aria-invalid={Boolean(linkFieldErrors.quanHe)}
+                  aria-describedby={linkFieldErrors.quanHe ? 'parent-link-relationship-error' : undefined}
                 >
                   <option value="Bố">Bố</option>
                   <option value="Mẹ">Mẹ</option>
@@ -877,6 +1017,7 @@ export default function ParentsManagement({ onShowToast, canManageLinks = false 
                   <option value="Bà">Bà</option>
                   <option value="Người giám hộ">Người giám hộ</option>
                 </select>
+                <FormFieldError id="parent-link-relationship-error">{linkFieldErrors.quanHe}</FormFieldError>
                 <button type="submit" className="btn-primary" disabled={isLinkSaving || !linkForm.maTre}>
                   {isLinkSaving ? 'Đang lưu...' : 'Liên kết trẻ'}
                 </button>

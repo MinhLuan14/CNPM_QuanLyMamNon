@@ -1,6 +1,15 @@
 import { Menu, LogOut } from 'lucide-react'
 
-export default function ParentHeader({ active, user, onMenuClick, onLogout }) {
+export default function ParentHeader({ active, user, parentName, onMenuClick, onLogout }) {
+  const displayName = parentName || user?.hoTen || 'Phụ huynh'
+  const avatarText = displayName
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(-2)
+    .map((part) => part[0])
+    .join('')
+    .toUpperCase() || 'PH'
+
   return (
     <header className="parent-header">
       <div className="parent-header-title">
@@ -18,10 +27,10 @@ export default function ParentHeader({ active, user, onMenuClick, onLogout }) {
       </div>
       <div className="parent-header-user">
         <span className="parent-user-avatar">
-          {(user?.tenDangNhap || 'PH').slice(0, 2).toUpperCase()}
+          {avatarText}
         </span>
         <div>
-          <strong>{user?.tenDangNhap || 'Phụ huynh'}</strong>
+          <strong>{displayName}</strong>
           <span>Phụ huynh</span>
         </div>
         <button className="parent-logout" onClick={onLogout}>

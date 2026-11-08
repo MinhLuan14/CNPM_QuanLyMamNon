@@ -1,63 +1,28 @@
-import { CalendarDays, Utensils } from 'lucide-react'
+import MenuWeekViewer from '../../components/MenuWeekViewer'
 
-const dateLabel = (value) => {
-  const date = new Date(value)
-  return Number.isNaN(date.getTime())
-    ? 'Ngày chưa xác định'
-    : date.toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'long' })
-}
-
-export default function ParentMenu({ menu, isAvailable = true }) {
-  const grouped = menu.reduce((groups, item) => {
-    const key = item.date?.slice(0, 10) || 'unknown'
-    groups[key] ||= []
-    groups[key].push(item)
-    return groups
-  }, {})
-  const days = Object.entries(grouped)
-
+export default function ParentMenu({
+  menus,
+  children = [],
+  selectedChildId,
+  onChildChange,
+  isAvailable = false,
+  isLoading = false,
+  error = '',
+  onRetry,
+}) {
   return (
     <div className="parent-page">
-      <div className="parent-page-intro">
-        <span className="parent-eyebrow">DINH DƯỠNG CỦA BÉ</span>
-        <h2>Thực đơn trong tuần</h2>
-        <p>Thực đơn do nhà trường công bố trong 7 ngày tới.</p>
-      </div>
-      {!isAvailable ? (
-        <section className="parent-panel parent-empty-large">
-          <Utensils size={28} />
-          <h3>Chưa thể tải thực đơn</h3>
-          <p>API thực đơn hiện chỉ cho phép tài khoản quản trị truy cập.</p>
-        </section>
-      ) : days.length ? (
-        <div className="parent-week-menu">
-          {days.map(([day, items]) => (
-            <section className="parent-panel parent-day-card" key={day}>
-              <div className="parent-day-heading">
-                <CalendarDays size={19} />
-                <h3>{day === 'unknown' ? 'Ngày chưa xác định' : dateLabel(items[0].date)}</h3>
-              </div>
-              <div className="parent-meal-list">
-                {items.map((item) => (
-                  <article className="parent-meal-item" key={item.id}>
-                    <span className="parent-meal-icon"><Utensils size={18} /></span>
-                    <div><small>{item.meal || 'Bữa ăn'}</small><strong>{item.dish || 'Chưa có tên món'}</strong>
-                      {item.ingredients && <p>Thành phần: {item.ingredients}</p>}
-                      {item.note && <p>Ghi chú: {item.note}</p>}
-                    </div>
-                  </article>
-                ))}
-              </div>
-            </section>
-          ))}
-        </div>
-      ) : (
-        <section className="parent-panel parent-empty-large">
-          <Utensils size={28} />
-          <h3>Chưa có thực đơn được công bố</h3>
-          <p>Thực đơn sẽ hiển thị tại đây sau khi nhà trường cập nhật.</p>
-        </section>
-      )}
+      <MenuWeekViewer
+        menus={menus}
+        children={children}
+        selectedChildId={selectedChildId}
+        onChildChange={onChildChange}
+        isAvailable={isAvailable}
+        loading={isLoading}
+        error={error}
+        onRetry={onRetry}
+        noAccessMessage={children.length === 0 ? 'Tài khoản chưa có trẻ được liên kết.' : ''}
+      />
     </div>
   )
 }

@@ -1,12 +1,19 @@
 package vhu.edu.babysharkedu.controller;
 
 import java.util.Map;
+import java.util.stream.Collectors;
 
+import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.validation.BindException;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.DuplicateKeyException;
@@ -47,6 +54,52 @@ public class ApiExceptionHandler {
             HttpMessageNotReadableException exception) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(Map.of("message", "Dữ liệu gửi lên không đúng định dạng hoặc kiểu dữ liệu."));
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<Map<String, String>> handleInvalidRequestFields(
+            MethodArgumentNotValidException exception) {
+        return validationError(exception.getBindingResult().getFieldErrors());
+    }
+
+    @ExceptionHandler(BindException.class)
+    public ResponseEntity<Map<String, String>> handleInvalidBoundFields(BindException exception) {
+        return validationError(exception.getBindingResult().getFieldErrors());
+    }
+
+    @ExceptionHandler({ ConstraintViolationException.class, HandlerMethodValidationException.class })
+    public ResponseEntity<Map<String, String>> handleInvalidParameters(Exception exception) {
+        String details;
+        if (exception instanceof ConstraintViolationException violationException) {
+            details = violationException.getConstraintViolations().stream()
+                    .map(violation -> {
+                        String path = violation.getPropertyPath().toString();
+                        String field = path.substring(path.lastIndexOf('.') + 1);
+                        return field + ": " + violation.getMessage();
+                    })
+                    .sorted()
+                    .collect(Collectors.joining("; "));
+        } else {
+            HandlerMethodValidationException validationException =
+                    (HandlerMethodValidationException) exception;
+            details = validationException.getParameterValidationResults().stream()
+                    .flatMap(result -> result.getResolvableErrors().stream()
+                            .map(error -> {
+                                String field = result.getMethodParameter().getParameterName();
+                                return (field == null ? "Tham số" : field) + ": " + error.getDefaultMessage();
+                            }))
+                    .sorted()
+                    .collect(Collectors.joining("; "));
+        }
+        return ResponseEntity.badRequest().body(Map.of(
+                "message", details.isBlank() ? "Tham số yêu cầu không hợp lệ." : details));
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<Map<String, String>> handleInvalidParameterType(
+            MethodArgumentTypeMismatchException exception) {
+        return ResponseEntity.badRequest().body(Map.of(
+                "message", exception.getName() + ": Giá trị không đúng kiểu dữ liệu."));
     }
 
     @ExceptionHandler(MaxUploadSizeExceededException.class)
@@ -112,5 +165,15 @@ public class ApiExceptionHandler {
             }
         }
         return false;
+    }
+
+    private ResponseEntity<Map<String, String>> validationError(java.util.List<FieldError> errors) {
+        String message = errors.stream()
+                .map(error -> error.getField() + ": " + error.getDefaultMessage())
+                .distinct()
+                .sorted()
+                .collect(Collectors.joining("; "));
+        return ResponseEntity.badRequest().body(Map.of(
+                "message", message.isBlank() ? "Dữ liệu yêu cầu không hợp lệ." : message));
     }
 }

@@ -1,5 +1,5 @@
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import './App.css'
 import AdminLayout from './layouts/AdminLayout'
 import Login from './pages/login/Login'
@@ -30,7 +30,12 @@ import TeacherNotifications from './pages/teacher/TeacherNotifications'
 import ProfilePage from './pages/ProfilePage'
 import Toast from './components/Toast'
 import { authRequest, fetchCsrfToken, responseError } from './api/auth'
-import { loadParentPortalData, loadTeacherPortalData } from './api/portal'
+import {
+  getParentMenus,
+  getTeacherMenus,
+  loadParentPortalData,
+  loadTeacherPortalData,
+} from './api/portal'
 
 const roleRoutes = {
   ADMIN: {
@@ -87,16 +92,42 @@ function ParentPortal({ user, onLogout, path, navigate }) {
   const [portalError, setPortalError] = useState('')
   const [logoutError, setLogoutError] = useState('')
   const [toast, setToast] = useState(null)
+  const [menuChildId, setMenuChildId] = useState('')
+  const [menuState, setMenuState] = useState(null)
+  const menuRequestId = useRef(0)
   const navigateToPage = (page) => navigate(pathForPage('PHUHUYNH', page))
 
   const loadPortal = useCallback(async () => {
+    if (user?.vaiTro !== 'PHUHUYNH') return
+    menuRequestId.current += 1
     setPortalError('')
     try {
-      setPortal(await loadParentPortalData())
+      const loaded = await loadParentPortalData()
+      setPortal(loaded)
+      setMenuChildId(String(loaded.children[0]?.id || ''))
+      setMenuState(null)
     } catch (error) {
       setPortalError(error.message || 'Không thể tải dữ liệu cổng phụ huynh.')
     }
-  }, [])
+  }, [user])
+
+  const handleParentMenuChildChange = async (childId) => {
+    if (!portal?.children.some((child) => String(child.id) === String(childId))) return
+    setMenuChildId(String(childId))
+    const requestId = menuRequestId.current + 1
+    menuRequestId.current = requestId
+    setMenuState({ loading: true, available: false, error: '', menus: [] })
+    try {
+      const menus = await getParentMenus(childId)
+      if (menuRequestId.current === requestId) {
+        setMenuState({ loading: false, available: true, error: '', menus })
+      }
+    } catch (error) {
+      if (menuRequestId.current === requestId) {
+        setMenuState({ loading: false, available: false, error: error.message, menus: [] })
+      }
+    }
+  }
 
   useEffect(() => {
     const timeoutId = window.setTimeout(loadPortal, 0)
@@ -121,7 +152,9 @@ function ParentPortal({ user, onLogout, path, navigate }) {
 
   if (!portal) {
     return <div className="session-message" role={portalError ? 'alert' : 'status'}>
-      {portalError || 'Đang tải hồ sơ phụ huynh...'}
+      {portalError || (active === 'Học phí & tiền ăn' || active === 'Lịch sử thanh toán'
+        ? 'Đang tải dữ liệu học phí...'
+        : 'Đang tải hồ sơ phụ huynh...')}
       {portalError && <button type="button" onClick={loadPortal}>Thử lại</button>}
     </div>
   }
@@ -132,24 +165,41 @@ function ParentPortal({ user, onLogout, path, navigate }) {
       page = <ParentChildProfile portal={portal} />
       break
     case 'Thực đơn':
-      page = <ParentMenu menu={portal.menu} isAvailable={portal.availability.menu} />
+      page = (
+        <ParentMenu
+          menus={menuState?.menus || portal.publishedMenus}
+          children={portal.children}
+          selectedChildId={menuChildId}
+          onChildChange={handleParentMenuChildChange}
+          isAvailable={menuState ? menuState.available : portal.availability.menu}
+          isLoading={menuState?.loading || false}
+          error={menuState?.error || portal.menuError}
+          onRetry={() => handleParentMenuChildChange(menuChildId)}
+        />
+      )
       break
     case 'Học phí & tiền ăn':
       page = <ParentTuition
         invoices={portal.invoices}
+        children={portal.children}
         isAvailable={portal.availability.invoices}
         error={portal.invoiceError}
         onRetry={loadPortal}
       />
       break
     case 'Lịch sử thanh toán':
-      page = <ParentPaymentHistory payments={portal.payments} isAvailable={portal.availability.payments} />
+      page = <ParentPaymentHistory
+        payments={portal.payments}
+        isAvailable={portal.availability.payments}
+        error={portal.invoiceError}
+        onRetry={loadPortal}
+      />
       break
     case 'Thông báo':
       page = <ParentNotifications notifications={portal.notifications} isAvailable={portal.availability.notifications} />
       break
     case 'Thông tin cá nhân':
-      page = <ProfilePage onShowToast={setToast} />
+      page = <ProfilePage onShowToast={setToast} linkedChildren={portal.children} />
       break
     default:
       page = <ParentDashboard portal={portal} onNavigate={navigateToPage} />
@@ -157,7 +207,13 @@ function ParentPortal({ user, onLogout, path, navigate }) {
 
   return (
     <>
-      <ParentLayout active={active} setActive={navigateToPage} user={user} onLogout={handleLogout}>
+      <ParentLayout
+        active={active}
+        setActive={navigateToPage}
+        user={user}
+        parentName={portal.parent.fullName}
+        onLogout={handleLogout}
+      >
         {logoutError && <div className="parent-error-banner" role="alert">{logoutError}</div>}
         {page}
       </ParentLayout>
@@ -219,7 +275,12 @@ function TeacherPortal({ user, onLogout, path, navigate }) {
       page = <TeacherChildren data={data} />
       break
     case 'Thực đơn':
-      page = <TeacherMenu menu={data.menu} isAvailable={data.availability.menu} />
+      page = (
+        <TeacherMenu
+          classes={data.menuClasses}
+          loadMenus={getTeacherMenus}
+        />
+      )
       break
     case 'Công việc & báo cáo':
       page = <TeacherTasks tasks={data.tasks} isAvailable={data.availability.tasks} />

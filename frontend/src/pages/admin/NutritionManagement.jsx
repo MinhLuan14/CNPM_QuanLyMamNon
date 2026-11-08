@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertCircle,
   CalendarDays,
@@ -16,6 +16,8 @@ import {
   Utensils,
 } from 'lucide-react';
 import Modal from '../../components/Modal';
+import FormFieldError from '../../components/FormFieldError';
+import { clearFieldError, focusFirstInvalid, requiredText, validateValues } from '../../utils/formValidation';
 import {
   deleteMenu,
   deleteFood,
@@ -34,6 +36,7 @@ const WEEKDAYS = ['Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sá
 const MEAL_OPTIONS = ['Bữa sáng', 'Bữa phụ sáng', 'Bữa trưa', 'Bữa phụ chiều'];
 const VND_NUMBER_FORMAT = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 2 });
 const MAX_FOOD_PRICE = 9999999999.99;
+const MAX_MENU_ITEM_PRICE = 99999999.99;
 const FOOD_CATEGORIES = [
   'Món sáng',
   'Món chính',
@@ -145,7 +148,11 @@ export default function NutritionManagement({ onShowToast }) {
   });
   const [foodFormError, setFoodFormError] = useState('');
   const [foodPriceError, setFoodPriceError] = useState('');
-  const [foodCategoryError, setFoodCategoryError] = useState('');
+  const [menuFieldErrors, setMenuFieldErrors] = useState({});
+  const [itemFieldErrors, setItemFieldErrors] = useState({});
+  const menuInProgress = useRef(false);
+  const itemInProgress = useRef(false);
+  const foodInProgress = useRef(false);
   const [foodSaving, setFoodSaving] = useState(false);
   const [foodDeleteTarget, setFoodDeleteTarget] = useState(null);
   const [foodDeleteError, setFoodDeleteError] = useState('');
@@ -232,6 +239,18 @@ export default function NutritionManagement({ onShowToast }) {
     : null;
   const isDetailsLoading = Boolean(weekMenu && menuDetailResult?.id !== weekMenu.maThucDon);
 
+  const refreshMenuDetails = async (menuId) => {
+    setMenuDetailResult(null);
+    try {
+      const updated = await getMenu(menuId);
+      setMenuDetailResult({ id: menuId, menu: updated, error: '' });
+      return null;
+    } catch (error) {
+      setMenuDetailResult({ id: menuId, menu: null, error: errorMessage(error) });
+      return error;
+    }
+  };
+
   const weekDates = useMemo(
     () => WEEKDAYS.map((dayName, index) => {
       const date = addDays(weekStart, index);
@@ -284,6 +303,9 @@ export default function NutritionManagement({ onShowToast }) {
   const selectedItemHasNoPrice = Boolean(itemForm.maMonAn)
     && selectedItemFood?.donGia == null
     && (!itemModal?.id || Number(itemModal.originalFoodId) !== Number(itemForm.maMonAn));
+  const selectedItemHasUnsupportedPrice = Boolean(itemForm.maMonAn)
+    && Number(selectedItemFood?.donGia) > MAX_MENU_ITEM_PRICE
+    && (!itemModal?.id || Number(itemModal.originalFoodId) !== Number(itemForm.maMonAn));
 
   const changeWeek = (offset) => {
     const next = addDays(weekStart, offset * 7);
@@ -293,17 +315,48 @@ export default function NutritionManagement({ onShowToast }) {
 
   const handleMenuSubmit = async (event) => {
     event.preventDefault();
+    if (menuInProgress.current) return;
     const start = localDate(menuForm.ngayBatDau);
     const monday = dateString(startOfWeek(start));
-    if (menuForm.ngayBatDau !== monday) {
-      notify('error', 'Ngày bắt đầu không hợp lệ', 'Tuần thực đơn phải bắt đầu vào thứ Hai.');
+    const errors = validateValues(menuForm, {
+      ngayBatDau: (value) => requiredText(value, 'Ngày bắt đầu')
+        || (value !== monday || menuForm.ngayKetThuc !== addDays(value, 6)
+          ? 'Tuần thực đơn phải bắt đầu vào thứ Hai và kết thúc vào Chủ nhật cùng tuần.'
+          : menus.some((menu) => (
+            menu.maThucDon !== menuModal?.id
+            && menu.tuanApDung === fullNameForWeek(value).week
+            && menu.namApDung === fullNameForWeek(value).year
+          ))
+            ? 'Đã có thực đơn cho tuần ISO này trong năm đã chọn.'
+            : ''),
+    });
+    setMenuFieldErrors(errors);
+    if (Object.keys(errors).length) {
+      focusFirstInvalid(event.currentTarget, errors);
       return;
     }
-    if (menuForm.ngayKetThuc !== addDays(menuForm.ngayBatDau, 6)) {
-      notify('error', 'Khoảng thời gian không hợp lệ', 'Ngày kết thúc phải là Chủ nhật cùng tuần.');
-      return;
+    const currentMenu = menus.find((menu) => menu.maThucDon === menuModal?.id);
+    if (menuForm.trangThai === 'true' && currentMenu?.trangThai !== true) {
+      const currentItems = menuDetails?.chiTiet || [];
+      const missingMeals = WEEKDAYS.flatMap((dayName, index) => {
+        const date = addDays(menuForm.ngayBatDau, index);
+        const mealsForDay = new Set(
+          currentItems.filter((item) => item.ngayAn === date).map((item) => item.buaAn?.trim().toLocaleLowerCase('vi')),
+        );
+        const missing = MEAL_OPTIONS.filter((meal) => !mealsForDay.has(meal.toLocaleLowerCase('vi')));
+        return missing.length ? [`${dayName}: ${missing.join(', ')}`] : [];
+      });
+      if (missingMeals.length) {
+        const preview = missingMeals.slice(0, 4).join('\n');
+        const remaining = missingMeals.length > 4 ? `\n...và ${missingMeals.length - 4} ngày/bữa khác.` : '';
+        const shouldPublish = window.confirm(
+          `Thực đơn chưa có đủ các bữa theo lịch tuần:\n${preview}${remaining}\n\nBạn vẫn muốn công khai thực đơn này?`,
+        );
+        if (!shouldPublish) return;
+      }
     }
     const { week, year, month } = fullNameForWeek(menuForm.ngayBatDau);
+    menuInProgress.current = true;
     setMenuSaving(true);
     try {
       const saved = await saveMenu({
@@ -321,13 +374,19 @@ export default function NutritionManagement({ onShowToast }) {
       await loadData();
       notify('success', 'Đã lưu thực đơn', `Thực đơn tuần ${saved.tuanApDung}/${saved.namApDung} đã được lưu.`);
     } catch (error) {
-      notify('error', 'Không thể lưu thực đơn', errorMessage(error));
+      if (error?.status === 409) {
+        setMenuFieldErrors({ ngayBatDau: errorMessage(error) });
+      } else {
+        notify('error', 'Không thể lưu thực đơn', errorMessage(error));
+      }
     } finally {
+      menuInProgress.current = false;
       setMenuSaving(false);
     }
   };
 
   const openMenuModal = (menu = null) => {
+    setMenuFieldErrors({});
     setMenuForm(menu ? {
       ngayBatDau: menu.ngayBatDau,
       ngayKetThuc: menu.ngayKetThuc,
@@ -353,6 +412,7 @@ export default function NutritionManagement({ onShowToast }) {
 
   const openItemModal = (item = null, meal = '') => {
     setItemQuery('');
+    setItemFieldErrors({});
     setItemForm(item ? {
       ngayAn: item.ngayAn,
       buaAn: item.buaAn || '',
@@ -377,19 +437,32 @@ export default function NutritionManagement({ onShowToast }) {
 
   const handleItemSubmit = async (event) => {
     event.preventDefault();
-    if (!weekMenu) return;
-    if (!itemForm.buaAn.trim()) {
-      notify('error', 'Chưa chọn bữa ăn', 'Vui lòng chọn bữa ăn trước khi lưu.');
+    if (!weekMenu || itemInProgress.current) return;
+    const errors = validateValues(itemForm, {
+      maMonAn: (value) => requiredText(value, 'Món ăn')
+        || (selectedItemHasNoPrice ? 'Món ăn chưa có đơn giá. Hãy cập nhật danh mục món ăn trước khi lưu.' : '')
+        || (selectedItemHasUnsupportedPrice
+          ? 'Đơn giá món ăn vượt giới hạn được lưu trong chi tiết thực đơn.'
+          : '')
+        || ((menuDetails?.chiTiet || []).some((existing) => (
+          existing.maChiTietThucDon !== itemModal?.id
+          && Number(existing.monAn?.maMonAn) === Number(value)
+          && existing.ngayAn === itemForm.ngayAn
+          && existing.buaAn?.trim().toLocaleLowerCase('vi') === itemForm.buaAn.trim().toLocaleLowerCase('vi')
+        ))
+          ? 'Món ăn này đã có trong cùng ngày và bữa ăn của thực đơn.'
+          : ''),
+      ngayAn: (value) => requiredText(value, 'Ngày ăn')
+        || (value < weekMenu.ngayBatDau || value > weekMenu.ngayKetThuc
+          ? 'Ngày ăn phải nằm trong tuần thực đơn đã chọn.' : ''),
+      buaAn: (value) => requiredText(value, 'Bữa ăn'),
+    });
+    setItemFieldErrors(errors);
+    if (Object.keys(errors).length) {
+      focusFirstInvalid(event.currentTarget, errors);
       return;
     }
-    if (selectedItemHasNoPrice) {
-      notify(
-        'error',
-        'Món ăn chưa có đơn giá',
-        'Vui lòng cập nhật đơn giá món ăn trước khi thêm vào thực đơn.',
-      );
-      return;
-    }
+    itemInProgress.current = true;
     setSavingItem(true);
     try {
       await saveMenuItem(weekMenu.maThucDon, {
@@ -399,27 +472,36 @@ export default function NutritionManagement({ onShowToast }) {
         ghiChu: itemForm.ghiChu.trim() || null,
       }, itemModal?.id);
       setItemModal(null);
-      const updated = await getMenu(weekMenu.maThucDon);
-      setMenuDetailResult({ id: weekMenu.maThucDon, menu: updated, error: '' });
-      notify('success', 'Đã lưu món', 'Chi tiết món ăn trong thực đơn đã được cập nhật.');
+      const refreshError = await refreshMenuDetails(weekMenu.maThucDon);
+      if (refreshError) {
+        notify('error', 'Đã lưu món nhưng chưa thể làm mới thực đơn', errorMessage(refreshError));
+      } else {
+        notify('success', 'Đã lưu món', 'Chi tiết món ăn trong thực đơn đã được cập nhật.');
+      }
     } catch (error) {
-      notify('error', 'Không thể lưu món', errorMessage(error));
+      if (error?.status === 409) {
+        setItemFieldErrors({ maMonAn: errorMessage(error) });
+      } else {
+        notify('error', 'Không thể lưu món', errorMessage(error));
+      }
     } finally {
+      itemInProgress.current = false;
       setSavingItem(false);
     }
   };
 
   const handleDeleteItem = async (item) => {
-    if (!weekMenu || !window.confirm(`Xóa món "${item.monAn.tenMonAn}" khỏi thực đơn ngày ${formatDate(item.ngayAn)}?`)) return;
+    const itemName = item.monAn?.tenMonAn || 'món ăn này';
+    if (!weekMenu || !window.confirm(`Xóa "${itemName}" khỏi thực đơn ngày ${formatDate(item.ngayAn)}?`)) return;
     setWorkingId(item.maChiTietThucDon);
     try {
       await deleteMenuItem(weekMenu.maThucDon, item.maChiTietThucDon);
-      setMenuDetailResult({
-        id: weekMenu.maThucDon,
-        menu: await getMenu(weekMenu.maThucDon),
-        error: '',
-      });
-      notify('success', 'Đã xóa món', 'Món ăn đã được gỡ khỏi thực đơn.');
+      const refreshError = await refreshMenuDetails(weekMenu.maThucDon);
+      if (refreshError) {
+        notify('error', 'Đã xóa món nhưng chưa thể làm mới thực đơn', errorMessage(refreshError));
+      } else {
+        notify('success', 'Đã xóa món', 'Món ăn đã được gỡ khỏi thực đơn.');
+      }
     } catch (error) {
       notify('error', 'Không thể xóa món', errorMessage(error));
     } finally {
@@ -430,7 +512,6 @@ export default function NutritionManagement({ onShowToast }) {
   const openFoodModal = (food = null, mode = 'edit') => {
     setFoodFormError('');
     setFoodPriceError('');
-    setFoodCategoryError('');
     setFoodForm(food ? {
       tenMonAn: food.tenMonAn || '',
       loaiMon: food.loaiMon || '',
@@ -443,28 +524,30 @@ export default function NutritionManagement({ onShowToast }) {
 
   const handleFoodSubmit = async (event) => {
     event.preventDefault();
-    if (!foodForm.tenMonAn.trim()) {
-      setFoodFormError('Vui lòng nhập tên món ăn.');
-      return;
-    }
-    if (!foodForm.loaiMon.trim()) {
-      setFoodCategoryError('Vui lòng chọn loại món ăn trước khi lưu.');
-      return;
-    }
+    if (foodInProgress.current) return;
     const price = Number(foodForm.donGia);
     const validPriceFormat = /^\d{1,10}(?:\.\d{1,2})?$/.test(foodForm.donGia.trim());
-    if (!validPriceFormat || !Number.isFinite(price) || price < 0 || price > MAX_FOOD_PRICE) {
-      setFoodPriceError('Đơn giá bắt buộc, không âm và tối đa 10 chữ số nguyên cùng 2 chữ số thập phân.');
+    const errors = validateValues(foodForm, {
+      tenMonAn: (value) => requiredText(value, 'Tên món ăn'),
+      donGia: (value) => !String(value ?? '').trim()
+        || !validPriceFormat || !Number.isFinite(price) || price < 0 || price > MAX_FOOD_PRICE
+        ? 'Đơn giá bắt buộc, không âm và tối đa 10 chữ số nguyên cùng 2 chữ số thập phân.'
+        : '',
+    });
+    setFoodFormError(errors.tenMonAn || '');
+    setFoodPriceError(errors.donGia || '');
+    if (Object.keys(errors).length) {
+      focusFirstInvalid(event.currentTarget, errors);
       return;
     }
     setFoodFormError('');
     setFoodPriceError('');
-    setFoodCategoryError('');
+    foodInProgress.current = true;
     setFoodSaving(true);
     try {
       await saveFood({
         tenMonAn: foodForm.tenMonAn.trim(),
-        loaiMon: foodForm.loaiMon,
+        loaiMon: foodForm.loaiMon.trim() || null,
         thanhPhan: foodForm.thanhPhan.trim() || null,
         donGia: price,
         trangThai: foodForm.trangThai === '' ? null : foodForm.trangThai === 'true',
@@ -479,6 +562,7 @@ export default function NutritionManagement({ onShowToast }) {
         notify('error', 'Không thể lưu món ăn', errorMessage(error));
       }
     } finally {
+      foodInProgress.current = false;
       setFoodSaving(false);
     }
   };
@@ -626,7 +710,7 @@ export default function NutritionManagement({ onShowToast }) {
                 <button className="btn-secondary" type="button" onClick={() => openMenuModal(weekMenu)}>
                   <Edit size={15} /> Sửa thực đơn
                 </button>
-                {(!menuDetails?.chiTiet?.length) && (
+                {menuDetails && !menuDetails.chiTiet?.length && weekMenu.trangThai !== true && (
                   <button className="btn-secondary nutrition-delete-button" type="button" onClick={handleDeleteMenu} disabled={workingId === weekMenu.maThucDon}>
                     <Trash2 size={15} /> Xóa
                   </button>
@@ -728,7 +812,9 @@ export default function NutritionManagement({ onShowToast }) {
                   )}
                 </div>
               ) : (
-                <div className="empty-state-hint" role="alert">Không thể tải chi tiết thực đơn.</div>
+                <div className="empty-state-hint" role="alert">
+                  {menuDetailResult?.error || 'Không thể tải chi tiết thực đơn.'}
+                </div>
               )}
             </>
           ) : (
@@ -895,20 +981,25 @@ export default function NutritionManagement({ onShowToast }) {
           </div>
         )}
       >
-        <form id="nutrition-menu-form" onSubmit={handleMenuSubmit} className="modal-form-grid">
+        <form id="nutrition-menu-form" onSubmit={handleMenuSubmit} className="modal-form-grid" noValidate>
           <div className="form-group">
             <label htmlFor="nutrition-menu-start">Ngày bắt đầu (thứ Hai) *</label>
             <input
               id="nutrition-menu-start"
+              name="ngayBatDau"
               type="date"
               value={menuForm.ngayBatDau}
               required
+              aria-invalid={Boolean(menuFieldErrors.ngayBatDau)}
+              aria-describedby={menuFieldErrors.ngayBatDau ? 'nutrition-menu-start-error' : undefined}
               onChange={(event) => {
                 if (!event.target.value) return;
                 const monday = dateString(startOfWeek(localDate(event.target.value)));
                 setMenuForm({ ...menuForm, ngayBatDau: monday, ngayKetThuc: addDays(monday, 6) });
+                clearFieldError(setMenuFieldErrors, 'ngayBatDau');
               }}
             />
+            <FormFieldError id="nutrition-menu-start-error">{menuFieldErrors.ngayBatDau}</FormFieldError>
           </div>
           <div className="form-group">
             <label htmlFor="nutrition-menu-end">Ngày kết thúc (Chủ nhật) *</label>
@@ -945,13 +1036,13 @@ export default function NutritionManagement({ onShowToast }) {
         footer={(
           <div className="modal-buttons">
             <button className="btn-secondary" type="button" onClick={closeItem} disabled={savingItem}>Hủy</button>
-            <button className="btn-primary" type="submit" form="nutrition-item-form" disabled={savingItem || selectableFoods.length === 0 || selectedItemHasNoPrice}>
+            <button className="btn-primary" type="submit" form="nutrition-item-form" disabled={savingItem || selectableFoods.length === 0 || selectedItemHasNoPrice || selectedItemHasUnsupportedPrice}>
               <CheckCircle2 size={16} /> {savingItem ? 'Đang lưu...' : 'Lưu món'}
             </button>
           </div>
         )}
       >
-        <form id="nutrition-item-form" onSubmit={handleItemSubmit} className="modal-form-grid">
+        <form id="nutrition-item-form" onSubmit={handleItemSubmit} className="modal-form-grid" noValidate>
           {selectableFoods.length === 0 && <div className="empty-state-hint col-2">Chưa có món đang sử dụng trong danh mục. Hãy thêm hoặc kích hoạt món ăn trước.</div>}
           <div className="form-group col-2">
             <label htmlFor="nutrition-item-search">Tìm món ăn</label>
@@ -961,6 +1052,7 @@ export default function NutritionManagement({ onShowToast }) {
             <label htmlFor="nutrition-item-food">Món ăn *</label>
             <select
               id="nutrition-item-food"
+              name="maMonAn"
               value={itemForm.maMonAn}
               onChange={(event) => {
                 const maMonAn = event.target.value;
@@ -974,7 +1066,10 @@ export default function NutritionManagement({ onShowToast }) {
                   maMonAn,
                   donGia,
                 }));
+                clearFieldError(setItemFieldErrors, 'maMonAn');
               }}
+              aria-invalid={Boolean(itemFieldErrors.maMonAn)}
+              aria-describedby={itemFieldErrors.maMonAn ? 'nutrition-item-food-error' : undefined}
               required
             >
               <option value="">Chọn món ăn</option>
@@ -987,18 +1082,27 @@ export default function NutritionManagement({ onShowToast }) {
                 )}
               {filteredSelectableFoods.map((food) => <option key={food.maMonAn} value={food.maMonAn}>{food.tenMonAn}{food.loaiMon ? ` · ${food.loaiMon}` : ''}</option>)}
             </select>
+            <FormFieldError id="nutrition-item-food-error">{itemFieldErrors.maMonAn}</FormFieldError>
           </div>
           <div className="form-group">
             <label htmlFor="nutrition-item-date">Ngày ăn *</label>
-            <input id="nutrition-item-date" type="date" min={weekMenu?.ngayBatDau} max={weekMenu?.ngayKetThuc} value={itemForm.ngayAn} onChange={(event) => setItemForm({ ...itemForm, ngayAn: event.target.value })} required />
+            <input id="nutrition-item-date" name="ngayAn" type="date" min={weekMenu?.ngayBatDau} max={weekMenu?.ngayKetThuc} value={itemForm.ngayAn} onChange={(event) => { setItemForm({ ...itemForm, ngayAn: event.target.value }); clearFieldError(setItemFieldErrors, 'ngayAn'); clearFieldError(setItemFieldErrors, 'maMonAn'); }} aria-invalid={Boolean(itemFieldErrors.ngayAn)} aria-describedby={itemFieldErrors.ngayAn ? 'nutrition-item-date-error' : undefined} required />
+            <FormFieldError id="nutrition-item-date-error">{itemFieldErrors.ngayAn}</FormFieldError>
           </div>
           <div className="form-group">
             <label htmlFor="nutrition-item-meal">Bữa ăn *</label>
             <div className="nutrition-select-wrap">
               <select
                 id="nutrition-item-meal"
+                name="buaAn"
                 value={itemForm.buaAn}
-                onChange={(event) => setItemForm({ ...itemForm, buaAn: event.target.value })}
+                onChange={(event) => {
+                  setItemForm({ ...itemForm, buaAn: event.target.value });
+                  clearFieldError(setItemFieldErrors, 'buaAn');
+                  clearFieldError(setItemFieldErrors, 'maMonAn');
+                }}
+                aria-invalid={Boolean(itemFieldErrors.buaAn)}
+                aria-describedby={itemFieldErrors.buaAn ? 'nutrition-item-meal-error' : undefined}
                 required
               >
                 <option value="">Chọn bữa ăn</option>
@@ -1007,6 +1111,7 @@ export default function NutritionManagement({ onShowToast }) {
                 )}
                 {MEAL_OPTIONS.map((meal) => <option key={meal} value={meal}>{meal}</option>)}
               </select>
+              <FormFieldError id="nutrition-item-meal-error">{itemFieldErrors.buaAn}</FormFieldError>
               <ChevronDown size={17} aria-hidden="true" />
             </div>
           </div>
@@ -1024,6 +1129,11 @@ export default function NutritionManagement({ onShowToast }) {
             {selectedItemHasNoPrice && (
               <small className="nutrition-field-error" role="alert">
                 Món ăn chưa có đơn giá. Hãy cập nhật danh mục món ăn trước khi lưu.
+              </small>
+            )}
+            {selectedItemHasUnsupportedPrice && (
+              <small className="nutrition-field-error" role="alert">
+                Đơn giá món ăn vượt giới hạn được lưu trong chi tiết thực đơn.
               </small>
             )}
           </div>
@@ -1060,11 +1170,12 @@ export default function NutritionManagement({ onShowToast }) {
             <div><span>Trạng thái</span><strong>{foodForm.trangThai === 'true' ? 'Đang sử dụng' : foodForm.trangThai === 'false' ? 'Ngừng sử dụng' : 'Chưa xác định'}</strong></div>
           </div>
         ) : (
-          <form id="nutrition-food-form" onSubmit={handleFoodSubmit} className="modal-form-grid">
+          <form id="nutrition-food-form" onSubmit={handleFoodSubmit} className="modal-form-grid" noValidate>
             <div className="form-group col-2">
               <label htmlFor="nutrition-food-name">Tên món ăn *</label>
               <input
                 id="nutrition-food-name"
+                name="tenMonAn"
                 maxLength={100}
                 value={foodForm.tenMonAn}
                 onChange={(event) => {
@@ -1082,24 +1193,15 @@ export default function NutritionManagement({ onShowToast }) {
               )}
             </div>
             <div className="form-group col-2">
-              <label htmlFor="nutrition-food-category">Loại món ăn *</label>
-              <div className={`nutrition-select-wrap ${foodCategoryError ? 'has-error' : ''}`}>
+              <label htmlFor="nutrition-food-category">Loại món ăn</label>
+              <div className="nutrition-select-wrap">
                 <select
                   id="nutrition-food-category"
+                  name="loaiMon"
                   value={foodForm.loaiMon}
-                  onChange={(event) => {
-                    setFoodForm({ ...foodForm, loaiMon: event.target.value });
-                    if (event.target.value) setFoodCategoryError('');
-                  }}
-                  onInvalid={(event) => {
-                    event.preventDefault();
-                    setFoodCategoryError('Vui lòng chọn loại món ăn trước khi lưu.');
-                  }}
-                  aria-invalid={Boolean(foodCategoryError)}
-                  aria-describedby={foodCategoryError ? 'nutrition-food-category-error' : undefined}
-                  required
+                  onChange={(event) => setFoodForm({ ...foodForm, loaiMon: event.target.value })}
                 >
-                  <option value="">Chọn loại món</option>
+                  <option value="">Chưa phân loại</option>
                   {foodForm.loaiMon && !categoryOptions.includes(foodForm.loaiMon) && (
                     <option value={foodForm.loaiMon}>{foodForm.loaiMon} (giá trị hiện tại)</option>
                   )}
@@ -1107,16 +1209,12 @@ export default function NutritionManagement({ onShowToast }) {
                 </select>
                 <ChevronDown size={17} aria-hidden="true" />
               </div>
-              {foodCategoryError && (
-                <small id="nutrition-food-category-error" className="nutrition-field-error" role="alert">
-                  {foodCategoryError}
-                </small>
-              )}
             </div>
             <div className="form-group col-2">
               <label htmlFor="nutrition-food-price">Đơn giá (VNĐ) *</label>
               <input
                 id="nutrition-food-price"
+                name="donGia"
                 type="number"
                 min="0"
                 max={MAX_FOOD_PRICE}
@@ -1138,8 +1236,8 @@ export default function NutritionManagement({ onShowToast }) {
               )}
             </div>
             <div className="form-group col-2">
-              <label htmlFor="nutrition-food-ingredients">Thành phần (tối đa 500 ký tự)</label>
-              <textarea id="nutrition-food-ingredients" maxLength={500} rows={4} value={foodForm.thanhPhan} onChange={(event) => setFoodForm({ ...foodForm, thanhPhan: event.target.value })} />
+              <label htmlFor="nutrition-food-ingredients">Thành phần (tối đa 255 ký tự)</label>
+              <textarea id="nutrition-food-ingredients" maxLength={255} rows={4} value={foodForm.thanhPhan} onChange={(event) => setFoodForm({ ...foodForm, thanhPhan: event.target.value })} />
             </div>
             <div className="form-group col-2">
               <label htmlFor="nutrition-food-status">Trạng thái</label>

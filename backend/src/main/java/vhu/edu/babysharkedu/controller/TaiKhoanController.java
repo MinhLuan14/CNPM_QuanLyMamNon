@@ -1,5 +1,8 @@
 package vhu.edu.babysharkedu.controller;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.NotNull;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.CacheControl;
 import org.springframework.http.ResponseEntity;
@@ -12,6 +15,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.validation.annotation.Validated;
 
 import vhu.edu.babysharkedu.dto.CapNhatTrangThaiTaiKhoanRequest;
 import vhu.edu.babysharkedu.dto.KiemTraTenDangNhapDTO;
@@ -28,6 +32,7 @@ import vhu.edu.babysharkedu.service.TaiKhoanService;
 
 @RestController
 @RequestMapping("/api")
+@Validated
 public class TaiKhoanController {
     private final TaiKhoanService taiKhoanService;
     private final TaiKhoanPhuHuynhService taiKhoanPhuHuynhService;
@@ -50,14 +55,16 @@ public class TaiKhoanController {
 
     @PostMapping("/accounts/{maTaiKhoan}/lock")
     @PreAuthorize("hasRole('ADMIN')")
-    public MessageResponse khoaTaiKhoan(@PathVariable Integer maTaiKhoan) {
+    public MessageResponse khoaTaiKhoan(
+            @PathVariable @Positive(message = "Mã tài khoản phải là số nguyên dương.") Integer maTaiKhoan) {
         taiKhoanService.khoaTaiKhoan(maTaiKhoan);
         return new MessageResponse("Đã khóa tài khoản.");
     }
 
     @PostMapping("/accounts/{maTaiKhoan}/unlock")
     @PreAuthorize("hasRole('ADMIN')")
-    public MessageResponse moKhoaTaiKhoan(@PathVariable Integer maTaiKhoan) {
+    public MessageResponse moKhoaTaiKhoan(
+            @PathVariable @Positive(message = "Mã tài khoản phải là số nguyên dương.") Integer maTaiKhoan) {
         taiKhoanService.moKhoaTaiKhoan(maTaiKhoan);
         return new MessageResponse("Đã mở khóa tài khoản.");
     }
@@ -65,7 +72,7 @@ public class TaiKhoanController {
     @PostMapping("/tai-khoan/{maTaiKhoan}/cap-lai-mat-khau")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<TaiKhoanMatKhauTamThoiDTO> capLaiMatKhau(
-            @PathVariable Integer maTaiKhoan) {
+            @PathVariable @Positive(message = "Mã tài khoản phải là số nguyên dương.") Integer maTaiKhoan) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .cacheControl(CacheControl.noStore())
                 .body(taiKhoanService.capLaiMatKhauTamThoi(maTaiKhoan));
@@ -74,7 +81,7 @@ public class TaiKhoanController {
     @PostMapping("/tai-khoan/phu-huynh")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<PhuHuynhCapTaiKhoanDTO> taoTaiKhoanVaHoSo(
-            @RequestBody TaoTaiKhoanPhuHuynhRequest request) {
+            @Valid @RequestBody @NotNull(message = "Dữ liệu yêu cầu không được để trống.") TaoTaiKhoanPhuHuynhRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .cacheControl(CacheControl.noStore())
                 .body(taiKhoanPhuHuynhService.taoHoSo(request, true));
@@ -82,7 +89,8 @@ public class TaiKhoanController {
 
     @PostMapping("/tai-khoan/phu-huynh/{maPhuHuynh}/cap-tai-khoan")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<PhuHuynhCapTaiKhoanDTO> capTaiKhoan(@PathVariable Integer maPhuHuynh) {
+    public ResponseEntity<PhuHuynhCapTaiKhoanDTO> capTaiKhoan(
+            @PathVariable @Positive(message = "Mã phụ huynh phải là số nguyên dương.") Integer maPhuHuynh) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .cacheControl(CacheControl.noStore())
                 .body(taiKhoanPhuHuynhService.capTaiKhoan(maPhuHuynh));
@@ -90,7 +98,7 @@ public class TaiKhoanController {
 
     @GetMapping("/tai-khoan/phu-huynh/{maPhuHuynh}")
     public TaiKhoanPhuHuynhDTO layTinhTrangTaiKhoan(
-            @PathVariable Integer maPhuHuynh,
+            @PathVariable @Positive(message = "Mã phụ huynh phải là số nguyên dương.") Integer maPhuHuynh,
             Authentication authentication) {
         return phuHuynhService.layTinhTrangTaiKhoan(maPhuHuynh, authentication);
     }
@@ -98,8 +106,8 @@ public class TaiKhoanController {
     @PatchMapping("/tai-khoan/{maTaiKhoan}/trang-thai")
     @PreAuthorize("hasRole('ADMIN')")
     public MessageResponse capNhatTrangThai(
-            @PathVariable Integer maTaiKhoan,
-            @RequestBody CapNhatTrangThaiTaiKhoanRequest request) {
+            @PathVariable @Positive(message = "Mã tài khoản phải là số nguyên dương.") Integer maTaiKhoan,
+            @Valid @RequestBody @NotNull(message = "Dữ liệu yêu cầu không được để trống.") CapNhatTrangThaiTaiKhoanRequest request) {
         taiKhoanPhuHuynhService.capNhatTrangThai(
                 maTaiKhoan, request == null ? null : request.trangThai());
         return new MessageResponse("Đã cập nhật trạng thái tài khoản.");
@@ -107,7 +115,8 @@ public class TaiKhoanController {
 
     @PostMapping("/tai-khoan/kiem-tra-ten-dang-nhap")
     @PreAuthorize("hasRole('ADMIN')")
-    public KiemTraTenDangNhapDTO kiemTraTenDangNhap(@RequestBody KiemTraTenDangNhapRequest request) {
+    public KiemTraTenDangNhapDTO kiemTraTenDangNhap(
+            @Valid @RequestBody @NotNull(message = "Dữ liệu yêu cầu không được để trống.") KiemTraTenDangNhapRequest request) {
         return taiKhoanPhuHuynhService.kiemTraTenDangNhap(
                 request == null ? null : request.tenDangNhap());
     }

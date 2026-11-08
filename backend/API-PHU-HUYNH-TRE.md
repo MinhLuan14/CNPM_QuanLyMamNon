@@ -4,9 +4,41 @@ Base URL: `http://localhost:8888`
 
 Các API dưới đây cần đăng nhập. API quản trị yêu cầu tài khoản có vai trò `ADMIN`; phụ huynh chỉ đọc được hồ sơ và liên kết thuộc tài khoản của mình. Với `GET /api/tre-em`, phụ huynh chỉ nhận trẻ đã liên kết; `GET /api/tre-em/{maTre}` từ chối nếu trẻ chưa liên kết. Tìm kiếm, danh sách theo lớp và thống kê chỉ dành cho nhân viên. Với session hiện tại, Postman phải giữ cookie đăng nhập và gửi CSRF token cho các request ghi dữ liệu.
 
+## Hồ sơ học sinh của phụ huynh đang đăng nhập
+
+`GET /api/phu-huynh/ho-so-cac-be` — chỉ vai trò `PHUHUYNH`. Backend lấy `maTaiKhoan` từ principal của Spring Security, tìm đúng hồ sơ phụ huynh và chỉ trả các liên kết trong `PHUHUYNH_TRE` của hồ sơ đó. Không truyền `maPhuHuynh` hoặc `maTre` trong request. Response có thông tin liên hệ của phụ huynh và toàn bộ trẻ đã liên kết, gồm lớp hiện tại, các giáo viên đang được phân công theo thời gian hiệu lực và quan hệ:
+
+```json
+{
+  "phuHuynh": {
+    "maPhuHuynh": 0,
+    "hoTenDemPH": "<hoTenDemPH>",
+    "tenPH": "<tenPH>",
+    "diaChiLH": "<diaChiLH>",
+    "soDienThoai": "<soDienThoai>",
+    "email": null
+  },
+  "treEm": [
+    {
+      "maTre": 0,
+      "hoTenDemTre": "<hoTenDemTre>",
+      "tenTre": "<tenTre>",
+      "ngayThangNamSinh": "<yyyy-MM-dd>",
+      "tenLopHoc": null,
+      "giaoVienPhuTrach": [],
+      "quanHe": "<quanHe>"
+    }
+  ]
+}
+```
+
+`tenLopHoc` sẽ là `null` nếu trẻ chưa phân lớp; `giaoVienPhuTrach` là danh sách rỗng nếu chưa có giáo viên đang phụ trách. Schema hiện tại không có cột giới tính, nên giao diện hiển thị trạng thái thiếu dữ liệu thay vì suy đoán. Endpoint dùng cookie session hiện có và không lưu response vào cache.
+
 ## Thanh toán học phí bằng VietQR
 
-Backend cung cấp `GET /api/phu-huynh/hoc-phi` để đọc các phiếu thu của trẻ đang liên kết với phụ huynh đã đăng nhập và `POST /api/phu-huynh/hoc-phi/{maHocPhi}/vietqr` để yêu cầu tạo QR. Request tạo QR không nhận số tiền hoặc mã phụ huynh từ trình duyệt. Backend kiểm tra quyền sở hữu, tính số tiền từ dữ liệu học phí và chỉ trả thông tin QR; không ghi giao dịch hoặc đổi trạng thái phiếu thu. Request POST cần cookie session và header CSRF như hướng dẫn bên dưới.
+Backend cung cấp `GET /api/phu-huynh/hoc-phi` để đọc các phiếu thu của trẻ đang liên kết với phụ huynh đã đăng nhập. Kết quả bao gồm ngày lập/hạn thanh toán, trạng thái hiện lưu, tổng tiền trong `HOCPHI`, các dòng chi tiết trong `CHITIETHOCPHI` và (nếu có) giao dịch `THANHTOAN`. Lịch sử giao dịch chỉ được lấy thông qua các phiếu của trẻ đã liên kết với phụ huynh hiện tại. Frontend dùng dữ liệu này cho danh sách, lọc, chi tiết và lịch sử; không cần endpoint chi tiết thanh toán riêng. Endpoint sắp xếp năm/tháng/mã phiếu mới nhất trước.
+
+`POST /api/phu-huynh/hoc-phi/{maHocPhi}/vietqr` yêu cầu tạo QR. Request tạo QR không nhận số tiền hoặc mã phụ huynh từ trình duyệt. Backend kiểm tra quyền sở hữu, tính số tiền từ dữ liệu học phí và chỉ trả thông tin QR; không ghi giao dịch hoặc đổi trạng thái phiếu thu. Request POST cần cookie session và header CSRF như hướng dẫn bên dưới.
 
 Request `POST /api/phu-huynh/hoc-phi/2/vietqr` không cần body. Response có dạng:
 

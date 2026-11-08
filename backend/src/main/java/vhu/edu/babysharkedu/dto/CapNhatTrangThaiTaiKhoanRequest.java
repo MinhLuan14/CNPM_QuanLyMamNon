@@ -1,4 +1,8 @@
 package vhu.edu.babysharkedu.dto;
 
-public record CapNhatTrangThaiTaiKhoanRequest(Boolean trangThai) {
+import jakarta.validation.constraints.NotNull;
+
+public record CapNhatTrangThaiTaiKhoanRequest(
+        @NotNull(message = "Trạng thái tài khoản là bắt buộc.")
+        Boolean trangThai) {
 }

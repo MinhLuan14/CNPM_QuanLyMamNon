@@ -3,7 +3,7 @@ import ParentHeader from '../components/parent/ParentHeader'
 import ParentSidebar from '../components/parent/ParentSidebar'
 import './ParentLayout.css'
 
-export default function ParentLayout({ active, setActive, user, onLogout, children }) {
+export default function ParentLayout({ active, setActive, user, parentName, onLogout, children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   return (
@@ -14,17 +14,15 @@ export default function ParentLayout({ active, setActive, user, onLogout, childr
         isOpen={sidebarOpen}
         setIsOpen={setSidebarOpen}
       />
-      <main className="parent-main">
+      <main className={`parent-main${active === 'Học phí & tiền ăn' ? ' parent-main-tuition' : ''}`}>
         <ParentHeader
           active={active}
           user={user}
+          parentName={parentName}
           onMenuClick={() => setSidebarOpen(true)}
           onLogout={onLogout}
         />
         <div className="parent-content">
-          {active !== 'Thông tin cá nhân' && active !== 'Học phí & tiền ăn' && (
-            <div className="parent-demo-notice">Dữ liệu giao diện minh họa · Chưa kết nối nghiệp vụ cổng phụ huynh</div>
-          )}
           {children}
         </div>
       </main>

@@ -12,6 +12,9 @@ import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.security.web.csrf.CsrfToken;
+import org.springframework.validation.annotation.Validated;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -31,6 +34,7 @@ import vhu.edu.babysharkedu.service.YeuCauHoTroTaiKhoanService;
 
 @RestController
 @RequestMapping("/api/auth")
+@Validated
 public class AuthController {
     private final SecurityContextRepository securityContextRepository;
     private final TaiKhoanService taiKhoanService;
@@ -57,7 +61,7 @@ public class AuthController {
     @org.springframework.web.bind.annotation.ResponseStatus(
             org.springframework.http.HttpStatus.ACCEPTED)
     public MessageResponse guiYeuCauHoTro(
-            @RequestBody YeuCauHoTroTaiKhoanRequest request,
+            @Valid @RequestBody @NotNull(message = "Dữ liệu yêu cầu không được để trống.") YeuCauHoTroTaiKhoanRequest request,
             HttpServletRequest httpRequest) {
         yeuCauHoTroTaiKhoanService.guiYeuCau(request, httpRequest.getRemoteAddr());
         return new MessageResponse(
@@ -68,7 +72,7 @@ public class AuthController {
     @org.springframework.web.bind.annotation.ResponseStatus(
             org.springframework.http.HttpStatus.ACCEPTED)
     public MessageResponse quenTenDangNhap(
-            @RequestBody KhoiPhucTaiKhoanRequest request,
+            @Valid @RequestBody @NotNull(message = "Dữ liệu yêu cầu không được để trống.") KhoiPhucTaiKhoanRequest request,
             HttpServletRequest httpRequest) {
         return khoiPhucTaiKhoanService.guiTenDangNhap(request, httpRequest.getRemoteAddr());
     }
@@ -77,14 +81,14 @@ public class AuthController {
     @org.springframework.web.bind.annotation.ResponseStatus(
             org.springframework.http.HttpStatus.ACCEPTED)
     public MessageResponse quenMatKhau(
-            @RequestBody KhoiPhucTaiKhoanRequest request,
+            @Valid @RequestBody @NotNull(message = "Dữ liệu yêu cầu không được để trống.") KhoiPhucTaiKhoanRequest request,
             HttpServletRequest httpRequest) {
         return khoiPhucTaiKhoanService.guiMatKhauTamThoi(request, httpRequest.getRemoteAddr());
     }
 
     @PostMapping("/login")
     public AuthResponse dangNhap(
-            @RequestBody DangNhapRequest request,
+            @Valid @RequestBody @NotNull(message = "Dữ liệu yêu cầu không được để trống.") DangNhapRequest request,
             HttpServletRequest httpRequest,
             HttpServletResponse httpResponse) {
         TaiKhoanPrincipal principal = taiKhoanService.dangNhap(request.tenDangNhap(), request.matKhau());
@@ -110,7 +114,7 @@ public class AuthController {
     @PostMapping("/change-password")
     @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'PHUHUYNH', 'GIAOVIEN')")
     public MessageResponse doiMatKhau(
-            @RequestBody DoiMatKhauRequest request,
+            @Valid @RequestBody @NotNull(message = "Dữ liệu yêu cầu không được để trống.") DoiMatKhauRequest request,
             Authentication authentication) {
         TaiKhoanPrincipal principal = (TaiKhoanPrincipal) authentication.getPrincipal();
         taiKhoanService.doiMatKhau(

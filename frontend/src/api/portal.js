@@ -10,38 +10,62 @@ function fullName(first, last) {
     return [first, last].filter(Boolean).join(' ').trim();
 }
 
-async function readLinkedChild(link) {
-    try {
-        const child = await readJson(`/api/tre-em/${link.maTre}`, 'Không thể tải hồ sơ trẻ.');
-        return {
-            id: child.maTre,
-            fullName: fullName(child.hoTenDemTre, child.tenTre),
-            dateOfBirth: child.ngayThangNamSinh,
-            className: child.tenLopHoc || '',
-            classId: child.maLopHoc,
-            status: child.trangThaiHocTap,
-            relationship: link.quanHe || '',
-            teacherName: '',
-        };
-    } catch {
-        return {
-            id: link.maTre,
-            fullName: fullName(link.hoTenDemTre, link.tenTre),
-            dateOfBirth: null,
-            className: '',
-            classId: null,
-            status: '',
-            relationship: link.quanHe || '',
-            teacherName: '',
-        };
-    }
+function mapPublishedMenus(data) {
+    return data.map((menu) => ({
+        id: menu.maThucDon,
+        week: menu.tuanApDung,
+        month: menu.thangApDung,
+        year: menu.namApDung,
+        startDate: menu.ngayBatDau,
+        endDate: menu.ngayKetThuc,
+        note: menu.ghiChu || '',
+        items: (menu.chiTiet || []).map((item) => ({
+            id: item.maChiTietThucDon,
+            date: item.ngayAn,
+            meal: item.buaAn || '',
+            dish: item.monAn?.tenMonAn || '',
+            ingredients: item.monAn?.thanhPhan || '',
+            note: item.ghiChu || '',
+        })),
+    }));
+}
+
+export async function getParentMenus(childId) {
+    const data = await readJson(
+        `/api/phu-huynh/thuc-don?maTre=${encodeURIComponent(childId)}`,
+        'Không thể tải thực đơn đã công bố.',
+    );
+    return mapPublishedMenus(data);
+}
+
+export async function getTeacherMenus(classId) {
+    const data = await readJson(
+        `/api/giao-vien/thuc-don?maLopHoc=${encodeURIComponent(classId)}`,
+        'Không thể tải thực đơn của lớp.',
+    );
+    return mapPublishedMenus(data);
 }
 
 export async function loadParentPortalData() {
-    const profile = await readJson('/api/profile', 'Không thể tải hồ sơ phụ huynh.');
-    const [children, invoicesResult] = await Promise.all([
-        Promise.all((profile.treEm || []).map(readLinkedChild)),
+    const childProfiles = await readJson('/api/phu-huynh/ho-so-cac-be', 'Không thể tải hồ sơ học sinh.');
+    const parentProfile = childProfiles.phuHuynh || {};
+    const children = (childProfiles.treEm || []).map((child) => ({
+        id: child.maTre,
+        fullName: fullName(child.hoTenDemTre, child.tenTre),
+        firstName: child.tenTre || '',
+        imageUrl: child.avatarUrl || '',
+        dateOfBirth: child.ngayThangNamSinh,
+        className: child.tenLopHoc || '',
+        relationship: child.quanHe || '',
+        teacherName: (child.giaoVienPhuTrach || []).join(', '),
+    }));
+    const [invoicesResult, menusResult] = await Promise.all([
         readJson('/api/phu-huynh/hoc-phi', 'Không thể tải danh sách học phí.')
+            .then((data) => ({ status: 'fulfilled', data }))
+            .catch((error) => ({ status: 'rejected', error })),
+        (children.length
+            ? getParentMenus(children[0].id)
+            : Promise.resolve([]))
             .then((data) => ({ status: 'fulfilled', data }))
             .catch((error) => ({ status: 'rejected', error })),
     ]);
@@ -49,39 +73,70 @@ export async function loadParentPortalData() {
     const invoices = invoicesAvailable
         ? invoicesResult.data.map((invoice) => ({
             id: invoice.maHocPhi,
+            childId: invoice.maTre,
             month: `${invoice.thangApDung}/${invoice.namApDung}`,
+            monthNumber: invoice.thangApDung,
+            year: invoice.namApDung,
             childName: invoice.hoTenTre,
             className: invoice.tenLopHoc || '',
-            totalAmount: Number(invoice.tongTien),
-            paidAmount: Number(invoice.daThanhToan),
-            remainingAmount: Number(invoice.conLai),
+            createdAt: invoice.ngayLap,
+            totalAmount: invoice.tongTien == null ? 0 : Number(invoice.tongTien),
+            paidAmount: invoice.daThanhToan == null ? 0 : Number(invoice.daThanhToan),
+            remainingAmount: invoice.conLai == null ? 0 : Number(invoice.conLai),
             status: invoice.trangThai || '',
             dueDate: invoice.hanThanhToan,
             hasRecordedPayment: invoice.daCoGiaoDich,
             items: (invoice.chiTiet || []).map((item) => ({
+                id: item.maChiTietHocPhi,
                 type: item.loaiPhi,
                 description: item.noiDung,
-                amount: Number(item.thanhTien),
+                quantity: item.soLuong,
+                unitPrice: item.donGia == null ? null : Number(item.donGia),
+                amount: item.thanhTien == null ? null : Number(item.thanhTien),
             })),
+            payment: invoice.thanhToan ? {
+                id: invoice.thanhToan.maThanhToan,
+                amount: invoice.thanhToan.soTienThanhToan == null
+                    ? null
+                    : Number(invoice.thanhToan.soTienThanhToan),
+                method: invoice.thanhToan.phuongThucThanhToan || '',
+                transactionCode: invoice.thanhToan.maGiaoDich || '',
+                paidAt: invoice.thanhToan.thoiGianThanhToan,
+                status: invoice.thanhToan.trangThai || '',
+                description: invoice.thanhToan.noiDung || '',
+            } : null,
         }))
         : [];
+    const payments = invoices
+        .filter((invoice) => invoice.payment)
+        .map((invoice) => ({
+            ...invoice.payment,
+            invoiceId: invoice.id,
+            childName: invoice.childName,
+            month: invoice.month,
+        }));
+    const menuAvailable = menusResult.status === 'fulfilled';
+    const publishedMenus = menuAvailable ? menusResult.data : [];
+    const menu = publishedMenus.flatMap((publishedMenu) => publishedMenu.items);
     return {
         parent: {
-            fullName: profile.hoTen || '',
-            phone: profile.soDienThoai || '',
-            email: profile.email || '',
-            address: profile.diaChiLH || '',
+            fullName: fullName(parentProfile.hoTenDemPH, parentProfile.tenPH),
+            phone: parentProfile.soDienThoai || '',
+            email: parentProfile.email || '',
+            address: parentProfile.diaChiLH || '',
         },
         children,
-        menu: [],
+        menu,
+        publishedMenus,
+        menuError: menuAvailable ? '' : menusResult.error.message,
         invoices,
         invoiceError: invoicesAvailable ? '' : invoicesResult.error.message,
-        payments: [],
+        payments,
         notifications: [],
         availability: {
-            menu: false,
+            menu: menuAvailable,
             invoices: invoicesAvailable,
-            payments: false,
+            payments: invoicesAvailable,
             notifications: false,
         },
     };
@@ -129,6 +184,10 @@ export async function loadTeacherPortalData() {
         } : null,
         classCount: classes.length,
         children,
+        menuClasses: assignments.map((assignment) => ({
+            id: assignment.maLopHoc,
+            name: assignment.tenLopHoc,
+        })),
         tasks: [],
         notifications: [],
         menu: [],

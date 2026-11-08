@@ -3,6 +3,9 @@ package vhu.edu.babysharkedu.controller;
 import java.util.List;
 import java.util.Map;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.NotNull;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -20,6 +23,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.RequestPart;
+import org.springframework.validation.annotation.Validated;
 
 import vhu.edu.babysharkedu.dto.GiaoVienDTO;
 import vhu.edu.babysharkedu.dto.GiaoVienRequest;
@@ -32,6 +36,7 @@ import vhu.edu.babysharkedu.service.AnhDaiDienService.HinhAnh;
 @RestController
 @RequestMapping("/api/giao-vien")
 @PreAuthorize("hasRole('ADMIN')")
+@Validated
 public class GiaoVienController {
     private final GiaoVienService giaoVienService;
     private final AnhDaiDienService anhDaiDienService;
@@ -47,12 +52,12 @@ public class GiaoVienController {
     }
 
     @GetMapping("/{maGiaoVien}")
-    public GiaoVienDTO layChiTiet(@PathVariable Integer maGiaoVien) {
+    public GiaoVienDTO layChiTiet(@PathVariable @Positive(message = "Mã giáo viên phải là số nguyên dương.") Integer maGiaoVien) {
         return giaoVienService.layChiTiet(maGiaoVien);
     }
 
     @GetMapping("/{maGiaoVien}/anh-dai-dien")
-    public ResponseEntity<Resource> layAnhDaiDien(@PathVariable Integer maGiaoVien) {
+    public ResponseEntity<Resource> layAnhDaiDien(@PathVariable @Positive(message = "Mã giáo viên phải là số nguyên dương.") Integer maGiaoVien) {
         HinhAnh image = anhDaiDienService.layAnhGiaoVien(maGiaoVien);
         return ResponseEntity.ok()
                 .contentType(image.mediaType())
@@ -63,7 +68,7 @@ public class GiaoVienController {
 
     @PostMapping(value = "/{maGiaoVien}/anh-dai-dien", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public Map<String, String> capNhatAnhDaiDien(
-            @PathVariable Integer maGiaoVien,
+            @PathVariable @Positive(message = "Mã giáo viên phải là số nguyên dương.") Integer maGiaoVien,
             @RequestPart("file") MultipartFile file) {
         anhDaiDienService.capNhatAnhGiaoVien(maGiaoVien, file);
         return Map.of("anhDaiDien", "/api/giao-vien/" + maGiaoVien + "/anh-dai-dien");
@@ -71,37 +76,38 @@ public class GiaoVienController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public GiaoVienTaoDTO them(@RequestBody GiaoVienRequest request) {
+    public GiaoVienTaoDTO them(
+            @Valid @RequestBody @NotNull(message = "Dữ liệu yêu cầu không được để trống.") GiaoVienRequest request) {
         return giaoVienService.them(request);
     }
 
     @PutMapping("/{maGiaoVien}")
     public GiaoVienDTO capNhat(
-            @PathVariable Integer maGiaoVien,
-            @RequestBody GiaoVienRequest request) {
+            @PathVariable @Positive(message = "Mã giáo viên phải là số nguyên dương.") Integer maGiaoVien,
+            @Valid @RequestBody @NotNull(message = "Dữ liệu yêu cầu không được để trống.") GiaoVienRequest request) {
         return giaoVienService.capNhat(maGiaoVien, request);
     }
 
     @PostMapping("/{maGiaoVien}/phan-cong")
     @ResponseStatus(HttpStatus.CREATED)
     public GiaoVienDTO themPhanCong(
-            @PathVariable Integer maGiaoVien,
-            @RequestBody PhanCongGiaoVienRequest request) {
+            @PathVariable @Positive(message = "Mã giáo viên phải là số nguyên dương.") Integer maGiaoVien,
+            @Valid @RequestBody @NotNull(message = "Dữ liệu yêu cầu không được để trống.") PhanCongGiaoVienRequest request) {
         return giaoVienService.themPhanCong(maGiaoVien, request);
     }
 
     @PutMapping("/{maGiaoVien}/phan-cong/{maLopHoc}")
     public GiaoVienDTO capNhatVaiTroPhanCong(
-            @PathVariable Integer maGiaoVien,
-            @PathVariable Integer maLopHoc,
-            @RequestBody PhanCongGiaoVienRequest request) {
+            @PathVariable @Positive(message = "Mã giáo viên phải là số nguyên dương.") Integer maGiaoVien,
+            @PathVariable @Positive(message = "Mã lớp học phải là số nguyên dương.") Integer maLopHoc,
+            @Valid @RequestBody @NotNull(message = "Dữ liệu yêu cầu không được để trống.") PhanCongGiaoVienRequest request) {
         return giaoVienService.capNhatVaiTroPhanCong(maGiaoVien, maLopHoc, request);
     }
 
     @PatchMapping("/{maGiaoVien}/phan-cong/{maLopHoc}/ket-thuc")
     public GiaoVienDTO ketThucPhanCong(
-            @PathVariable Integer maGiaoVien,
-            @PathVariable Integer maLopHoc) {
+            @PathVariable @Positive(message = "Mã giáo viên phải là số nguyên dương.") Integer maGiaoVien,
+            @PathVariable @Positive(message = "Mã lớp học phải là số nguyên dương.") Integer maLopHoc) {
         return giaoVienService.ketThucPhanCong(maGiaoVien, maLopHoc);
     }
 }

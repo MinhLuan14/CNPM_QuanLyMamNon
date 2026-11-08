@@ -1,7 +1,9 @@
 package vhu.edu.babysharkedu.service;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -9,7 +11,10 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import vhu.edu.babysharkedu.dto.CapNhatProfileRequest;
+import vhu.edu.babysharkedu.dto.HoSoTreDTO;
 import vhu.edu.babysharkedu.dto.PhanCongGiaoVienDTO;
+import vhu.edu.babysharkedu.dto.PhuHuynhHoSoCacBeDTO;
+import vhu.edu.babysharkedu.dto.PhuHuynhHoSoDTO;
 import vhu.edu.babysharkedu.dto.PhuHuynhTreDTO;
 import vhu.edu.babysharkedu.dto.ProfileDTO;
 import vhu.edu.babysharkedu.model.GiaoVien;
@@ -44,6 +49,73 @@ public class ProfileService {
     @Transactional(readOnly = true)
     public ProfileDTO layProfile(TaiKhoanPrincipal principal) {
         return taoProfile(principal);
+    }
+
+    @Transactional(readOnly = true)
+    public PhuHuynhHoSoCacBeDTO layHoSoCacBe(TaiKhoanPrincipal principal) {
+        if (!"PHUHUYNH".equals(principal.getVaiTro())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Chỉ phụ huynh mới được xem hồ sơ các bé.");
+        }
+
+        PhuHuynh parent = phuHuynhRepository.findByTaiKhoanMaTaiKhoan(principal.getMaTaiKhoan())
+                .orElseThrow(this::profileNotFound);
+        List<PhuHuynhTre> links = phuHuynhTreRepository
+                .findAllByPhuHuynhMaPhuHuynhOrderByTreEmMaTreAsc(parent.getMaPhuHuynh());
+        LocalDateTime now = LocalDateTime.now();
+        Map<Integer, List<String>> teachersByClass = new HashMap<>();
+        links.stream()
+                .map(link -> link.getTreEm().getLopHoc())
+                .filter(java.util.Objects::nonNull)
+                .map(lopHoc -> lopHoc.getMaLopHoc())
+                .distinct()
+                .forEach(classId -> teachersByClass.put(
+                        classId,
+                        phanCongGiaoVienRepository.findPhanCongHienTaiByLopHoc(classId, now).stream()
+                                .map(assignment -> (assignment.getGiaoVien().getHoTenDem() + " "
+                                        + assignment.getGiaoVien().getTenGiaoVien()).trim())
+                                .toList()));
+
+        List<HoSoTreDTO> children = links.stream()
+                .map(link -> {
+                    var child = link.getTreEm();
+                    var classroom = child.getLopHoc();
+                    return new HoSoTreDTO(
+                            child.getMaTre(),
+                            child.getHoTenDemTre(),
+                            child.getTenTre(),
+                            child.getAnhDaiDien() == null || child.getAnhDaiDien().isBlank()
+                                    ? null
+                                    : "/api/tre-em/" + child.getMaTre() + "/anh-dai-dien",
+                            child.getNgayThangNamSinh(),
+                            classroom == null ? null : classroom.getTenLopHoc(),
+                            classroom == null ? List.of() : teachersByClass.getOrDefault(
+                                    classroom.getMaLopHoc(), List.of()),
+                            link.getQuanHe());
+                })
+                .toList();
+
+        return new PhuHuynhHoSoCacBeDTO(
+                new PhuHuynhHoSoDTO(
+                        parent.getMaPhuHuynh(),
+                        parent.getHoTenDemPH(),
+                        parent.getTenPH(),
+                        parent.getDiaChiLH(),
+                        parent.getSoDienThoai(),
+                        parent.getEmail()),
+                children);
+    }
+
+    @Transactional(readOnly = true)
+    public void kiemTraTreDuocLienKet(TaiKhoanPrincipal principal, Integer maTre) {
+        if (!"PHUHUYNH".equals(principal.getVaiTro())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Chỉ phụ huynh mới được xem thực đơn của bé.");
+        }
+        PhuHuynh parent = phuHuynhRepository.findByTaiKhoanMaTaiKhoan(principal.getMaTaiKhoan())
+                .orElseThrow(this::profileNotFound);
+        if (!phuHuynhTreRepository.existsByPhuHuynhMaPhuHuynhAndTreEmMaTre(
+                parent.getMaPhuHuynh(), maTre)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy trẻ được liên kết với tài khoản.");
+        }
     }
 
     @Transactional

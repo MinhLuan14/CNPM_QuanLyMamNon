@@ -6,6 +6,8 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
@@ -13,6 +15,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
@@ -73,6 +76,23 @@ class ThucDonServiceTest {
     }
 
     @Test
+    void rejectsOverlappingDateWindowEvenWhenLegacyWeekFieldsDiffer() {
+        ThucDon existing = new ThucDon();
+        existing.setMaThucDon(8);
+        existing.setTuanApDung(44);
+        existing.setNamApDung(2026);
+        existing.setNgayBatDau(LocalDate.parse("2026-10-19").atStartOfDay());
+        existing.setNgayKetThuc(LocalDate.parse("2026-10-25").atTime(23, 59, 59));
+        when(menuRepository.findAll()).thenReturn(List.of(existing));
+
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> service.them(menuRequest("2026-10-19", 43)));
+
+        assertEquals(HttpStatus.CONFLICT, exception.getStatusCode());
+    }
+
+    @Test
     void updatesMenuAndPreservesNullStatus() {
         ThucDon menu = new ThucDon();
         menu.setMaThucDon(12);
@@ -97,6 +117,68 @@ class ThucDonServiceTest {
     }
 
     @Test
+    void publishedMenuQueryReturnsOnlyPublishedMenusWithDetailsInDateOrder() {
+        ThucDon laterPublished = menu(3, "2026-10-26", true);
+        ThucDon draft = menu(2, "2026-10-19", false);
+        ThucDon earlierPublished = menu(1, "2026-10-12", true);
+        MonAn food = new MonAn();
+        food.setMaMonAn(4);
+        food.setTenMonAn("Cháo gà");
+        ChiTietThucDon detail = new ChiTietThucDon();
+        detail.setMaChiTietThucDon(9);
+        detail.setThucDon(earlierPublished);
+        detail.setMonAn(food);
+        detail.setNgayAn(LocalDate.parse("2026-10-13").atStartOfDay());
+        detail.setBuaAn("Bữa sáng");
+        when(menuRepository.findAll()).thenReturn(List.of(laterPublished, draft, earlierPublished));
+        when(detailRepository.findAllByThucDonMaThucDonOrderByNgayAnAscBuaAnAscMaChiTietThucDonAsc(1))
+                .thenReturn(List.of(detail));
+        when(detailRepository.findAllByThucDonMaThucDonOrderByNgayAnAscBuaAnAscMaChiTietThucDonAsc(3))
+                .thenReturn(List.of());
+
+        var result = service.layTatCaDaCongKhai();
+
+        assertEquals(List.of(1, 3), result.stream().map(item -> item.maThucDon()).toList());
+        assertEquals(1, result.get(0).chiTiet().size());
+        assertEquals("Cháo gà", result.get(0).chiTiet().get(0).monAn().tenMonAn());
+        verify(detailRepository).findAllByThucDonMaThucDonOrderByNgayAnAscBuaAnAscMaChiTietThucDonAsc(1);
+        verify(detailRepository).findAllByThucDonMaThucDonOrderByNgayAnAscBuaAnAscMaChiTietThucDonAsc(3);
+        verify(detailRepository, never())
+                .findAllByThucDonMaThucDonOrderByNgayAnAscBuaAnAscMaChiTietThucDonAsc(2);
+    }
+
+    @Test
+    void refusesDateChangeThatWouldLeaveExistingItemsOutsideMenuWindow() {
+        ThucDon menu = menu(12, "2026-10-19", true);
+        ChiTietThucDon detail = new ChiTietThucDon();
+        detail.setNgayAn(LocalDate.parse("2026-10-20").atStartOfDay());
+        when(menuRepository.findById(12)).thenReturn(Optional.of(menu));
+        when(menuRepository.findAll()).thenReturn(List.of(menu));
+        when(detailRepository.findAllByThucDonMaThucDonOrderByNgayAnAscBuaAnAscMaChiTietThucDonAsc(12))
+                .thenReturn(List.of(detail));
+
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> service.capNhat(12, menuRequest("2026-10-26", 44)));
+
+        assertEquals(HttpStatus.CONFLICT, exception.getStatusCode());
+        verify(menuRepository, never()).saveAndFlush(menu);
+    }
+
+    @Test
+    void refusesToDeletePublishedMenu() {
+        ThucDon menu = menu(13, "2026-10-19", true);
+        when(menuRepository.findById(13)).thenReturn(Optional.of(menu));
+
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> service.xoa(13));
+
+        assertEquals(HttpStatus.CONFLICT, exception.getStatusCode());
+        verify(detailRepository, never()).countByThucDonMaThucDon(13);
+    }
+
+    @Test
     void refusesToDeleteMenuWithExistingDetails() {
         ThucDon menu = new ThucDon();
         menu.setMaThucDon(13);
@@ -108,6 +190,105 @@ class ThucDonServiceTest {
                 () -> service.xoa(13));
 
         assertEquals(HttpStatus.CONFLICT, exception.getStatusCode());
+    }
+
+    @Test
+    void mapsConcurrentDetailReferenceOnDeleteToConflict() {
+        ThucDon menu = new ThucDon();
+        menu.setMaThucDon(13);
+        when(menuRepository.findById(13)).thenReturn(Optional.of(menu));
+        when(detailRepository.countByThucDonMaThucDon(13)).thenReturn(0L);
+        org.mockito.Mockito.doThrow(new DataIntegrityViolationException("referenced"))
+                .when(menuRepository).flush();
+
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> service.xoa(13));
+
+        assertEquals(HttpStatus.CONFLICT, exception.getStatusCode());
+    }
+
+    @Test
+    void rejectsDuplicateFoodOnSameDateAndMealIgnoringCaseAndStoredWhitespace() {
+        ThucDon menu = new ThucDon();
+        menu.setMaThucDon(3);
+        menu.setNgayBatDau(LocalDate.parse("2026-10-19").atStartOfDay());
+        menu.setNgayKetThuc(LocalDate.parse("2026-10-25").atTime(23, 59, 59));
+        when(menuRepository.findById(3)).thenReturn(Optional.of(menu));
+
+        MonAn food = new MonAn();
+        food.setMaMonAn(4);
+        food.setDonGia(new BigDecimal("12000.00"));
+        food.setTrangThai(true);
+        when(foodRepository.findById(4)).thenReturn(Optional.of(food));
+
+        ChiTietThucDon existing = new ChiTietThucDon();
+        existing.setMaChiTietThucDon(9);
+        existing.setThucDon(menu);
+        existing.setMonAn(food);
+        existing.setNgayAn(LocalDate.parse("2026-10-20").atStartOfDay());
+        existing.setBuaAn(" Bữa sáng ");
+        when(detailRepository.findAllByThucDonMaThucDonOrderByNgayAnAscBuaAnAscMaChiTietThucDonAsc(3))
+                .thenReturn(List.of(existing));
+
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> service.themMon(3, new ChiTietThucDonRequest(
+                        LocalDate.parse("2026-10-20"), "BỮA SÁNG", null, null, 4)));
+
+        assertEquals(HttpStatus.CONFLICT, exception.getStatusCode());
+    }
+
+    @Test
+    void rejectsMenuItemOutsideWeeklyDateWindow() {
+        ThucDon menu = new ThucDon();
+        menu.setMaThucDon(3);
+        menu.setNgayBatDau(LocalDate.parse("2026-10-19").atStartOfDay());
+        menu.setNgayKetThuc(LocalDate.parse("2026-10-25").atTime(23, 59, 59));
+        when(menuRepository.findById(3)).thenReturn(Optional.of(menu));
+
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> service.themMon(3, new ChiTietThucDonRequest(
+                        LocalDate.parse("2026-10-26"), "Bữa sáng", null, null, 4)));
+
+        assertEquals(HttpStatus.BAD_REQUEST, exception.getStatusCode());
+    }
+
+    @Test
+    void refusesToDeleteDetailOwnedByAnotherMenu() {
+        ThucDon otherMenu = new ThucDon();
+        otherMenu.setMaThucDon(9);
+        ChiTietThucDon detail = new ChiTietThucDon();
+        detail.setMaChiTietThucDon(7);
+        detail.setThucDon(otherMenu);
+        when(detailRepository.findById(7)).thenReturn(Optional.of(detail));
+
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> service.xoaMon(3, 7));
+
+        assertEquals(HttpStatus.NOT_FOUND, exception.getStatusCode());
+        verify(detailRepository, never()).delete(detail);
+    }
+
+    @Test
+    void preservesExplicitDraftStatusWhenCreatingMenu() {
+        when(menuRepository.findAll()).thenReturn(List.of());
+        when(menuRepository.saveAndFlush(any(ThucDon.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+        ThucDonRequest draftRequest = new ThucDonRequest(
+                43,
+                10,
+                2026,
+                LocalDate.parse("2026-10-19"),
+                LocalDate.parse("2026-10-25"),
+                null,
+                false);
+
+        var result = service.them(draftRequest);
+
+        assertEquals(Boolean.FALSE, result.trangThai());
     }
 
     @Test
@@ -267,5 +448,17 @@ class ThucDonServiceTest {
         LocalDate start = LocalDate.parse(startDate);
         return new ThucDonRequest(
                 week, start.getMonthValue(), 2026, start, start.plusDays(6), null, true);
+    }
+
+    private ThucDon menu(int id, String startDate, boolean published) {
+        LocalDate start = LocalDate.parse(startDate);
+        ThucDon menu = new ThucDon();
+        menu.setMaThucDon(id);
+        menu.setTuanApDung(start.get(java.time.temporal.WeekFields.ISO.weekOfWeekBasedYear()));
+        menu.setNamApDung(start.get(java.time.temporal.WeekFields.ISO.weekBasedYear()));
+        menu.setNgayBatDau(start.atStartOfDay());
+        menu.setNgayKetThuc(start.plusDays(6).atTime(23, 59, 59));
+        menu.setTrangThai(published);
+        return menu;
     }
 }

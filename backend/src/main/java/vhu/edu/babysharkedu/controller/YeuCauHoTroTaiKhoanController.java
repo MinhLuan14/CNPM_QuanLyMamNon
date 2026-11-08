@@ -2,6 +2,9 @@ package vhu.edu.babysharkedu.controller;
 
 import java.util.List;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.NotNull;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.CacheControl;
 import org.springframework.http.ResponseEntity;
@@ -14,6 +17,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.validation.annotation.Validated;
 
 import vhu.edu.babysharkedu.dto.CapNhatYeuCauHoTroRequest;
 import vhu.edu.babysharkedu.dto.MatKhauTamThoiDTO;
@@ -23,6 +27,7 @@ import vhu.edu.babysharkedu.service.YeuCauHoTroTaiKhoanService;
 @RestController
 @RequestMapping("/api/yeu-cau-ho-tro")
 @PreAuthorize("hasAnyRole('ADMIN', 'GIAOVIEN')")
+@Validated
 public class YeuCauHoTroTaiKhoanController {
     private final YeuCauHoTroTaiKhoanService yeuCauService;
 
@@ -36,14 +41,15 @@ public class YeuCauHoTroTaiKhoanController {
     }
 
     @GetMapping("/{maYeuCau}")
-    public YeuCauHoTroTaiKhoanDTO layChiTiet(@PathVariable Integer maYeuCau) {
+    public YeuCauHoTroTaiKhoanDTO layChiTiet(
+            @PathVariable @Positive(message = "Mã yêu cầu hỗ trợ phải là số nguyên dương.") Integer maYeuCau) {
         return yeuCauService.layChiTiet(maYeuCau);
     }
 
     @PatchMapping("/{maYeuCau}")
     public YeuCauHoTroTaiKhoanDTO capNhat(
-            @PathVariable Integer maYeuCau,
-            @RequestBody CapNhatYeuCauHoTroRequest request,
+            @PathVariable @Positive(message = "Mã yêu cầu hỗ trợ phải là số nguyên dương.") Integer maYeuCau,
+            @Valid @RequestBody @NotNull(message = "Dữ liệu yêu cầu không được để trống.") CapNhatYeuCauHoTroRequest request,
             Authentication authentication) {
         return yeuCauService.capNhat(maYeuCau, request, authentication);
     }
@@ -51,7 +57,7 @@ public class YeuCauHoTroTaiKhoanController {
     @PostMapping("/{maYeuCau}/cap-lai-mat-khau")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<MatKhauTamThoiDTO> capLaiMatKhau(
-            @PathVariable Integer maYeuCau,
+            @PathVariable @Positive(message = "Mã yêu cầu hỗ trợ phải là số nguyên dương.") Integer maYeuCau,
             Authentication authentication) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .cacheControl(CacheControl.noStore())

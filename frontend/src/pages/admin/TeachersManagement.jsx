@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertCircle,
   Award,
@@ -18,6 +18,8 @@ import {
 import Modal from '../../components/Modal';
 import { authRequest, fetchCsrfToken, responseError } from '../../api/auth';
 import { API_BASE_URL } from '../../config';
+import FormFieldError from '../../components/FormFieldError';
+import { clearFieldError, focusFirstInvalid, requiredText, validEmail, validVietnamesePhone, validateValues } from '../../utils/formValidation';
 
 const ASSIGNMENT_ROLES = [
   'Giáo viên chủ nhiệm',
@@ -68,6 +70,7 @@ export default function TeachersManagement({ onShowToast }) {
   const [form, setForm] = useState(EMPTY_FORM);
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState('');
+  const [imageError, setImageError] = useState('');
   const [formError, setFormError] = useState('');
   const [fieldErrors, setFieldErrors] = useState({});
   const [isSaving, setIsSaving] = useState(false);
@@ -77,6 +80,9 @@ export default function TeachersManagement({ onShowToast }) {
   const [assignmentRoleDrafts, setAssignmentRoleDrafts] = useState({});
   const [initialAssignment, setInitialAssignment] = useState(null);
   const [credentials, setCredentials] = useState(null);
+  const [assignmentClassError, setAssignmentClassError] = useState('');
+  const saveInProgress = useRef(false);
+  const operationInProgress = useRef(false);
 
   const showToast = (type, title, message) => {
     onShowToast?.({ type, title, message });
@@ -167,6 +173,7 @@ export default function TeachersManagement({ onShowToast }) {
     setInitialAssignment(null);
     setDetailsError('');
     setImageFile(null);
+    setImageError('');
     setImagePreview(`${API_BASE_URL}/images/default-teacher.svg`);
     setFormError('');
     setFieldErrors({});
@@ -183,6 +190,7 @@ export default function TeachersManagement({ onShowToast }) {
     setFormError('');
     setFieldErrors({});
     setImageFile(null);
+    setImageError('');
     setImagePreview(teacher.anhDaiDien
       ? `${API_BASE_URL}${teacher.anhDaiDien}`
       : `${API_BASE_URL}/images/default-teacher.svg`);
@@ -238,8 +246,21 @@ export default function TeachersManagement({ onShowToast }) {
 
   const handleSaveTeacher = async (event) => {
     event.preventDefault();
+    if (saveInProgress.current) return;
+    const errors = validateValues(form, {
+      hoTen: (value) => requiredText(value, 'Họ và tên giáo viên'),
+      ngaySinh: (value) => value && value > TODAY ? 'Ngày sinh không được ở trong tương lai.' : '',
+      soDienThoai: (value) => requiredText(value, 'Số điện thoại') || validVietnamesePhone(value),
+      email: (value) => requiredText(value, 'Email') || validEmail(value),
+      diaChiLH: (value) => requiredText(value, 'Địa chỉ liên hệ'),
+    });
+    setFieldErrors(errors);
+    if (Object.keys(errors).length) {
+      focusFirstInvalid(event.currentTarget, errors);
+      return;
+    }
+    saveInProgress.current = true;
     setFormError('');
-    setFieldErrors({});
     setIsSaving(true);
     try {
       const csrfToken = await fetchCsrfToken();
@@ -319,11 +340,14 @@ export default function TeachersManagement({ onShowToast }) {
         setFormError(message);
       }
     } finally {
+      saveInProgress.current = false;
       setIsSaving(false);
     }
   };
 
   const runAssignmentAction = async (endpoint, method, body, successMessage, operationKey) => {
+    if (operationInProgress.current) return;
+    operationInProgress.current = true;
     setOperation(operationKey);
     try {
       const csrfToken = await fetchCsrfToken();
@@ -342,15 +366,18 @@ export default function TeachersManagement({ onShowToast }) {
     } catch (error) {
       showToast('error', 'Không thể cập nhật phân công', error.message || 'Vui lòng thử lại.');
     } finally {
+      operationInProgress.current = false;
       setOperation('');
     }
   };
 
   const addAssignment = () => {
     if (!assignmentClassId) {
-      showToast('error', 'Chưa chọn lớp', 'Vui lòng chọn lớp học cần phân công.');
+      setAssignmentClassError('Vui lòng chọn lớp học cần phân công.');
+      document.getElementById('teacher-assignment-class')?.focus();
       return;
     }
+    setAssignmentClassError('');
     runAssignmentAction(
       `/api/giao-vien/${selectedTeacher.maGiaoVien}/phan-cong`,
       'POST',
@@ -386,7 +413,7 @@ export default function TeachersManagement({ onShowToast }) {
   };
 
   const teacherForm = (
-    <form id="teacher-form" onSubmit={handleSaveTeacher} className="modal-form-grid">
+    <form id="teacher-form" onSubmit={handleSaveTeacher} className="modal-form-grid" noValidate>
       {formError && <div className="empty-state-hint col-2" role="alert"><AlertCircle size={16} /> {formError}</div>}
       <div className="form-group col-2">
         <label htmlFor="teacher-avatar">Ảnh đại diện</label>
@@ -404,14 +431,21 @@ export default function TeachersManagement({ onShowToast }) {
             id="teacher-avatar"
             type="file"
             accept="image/jpeg,image/png,image/webp"
+            teacher-page-heading aria-invalid={Boolean(imageError)}
+            aria-describedby={imageError ? 'teacher-avatar-error' : undefined}
             onChange={(event) => {
               const file = event.target.files?.[0] || null;
               if (file && (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)
                 || file.size > 5 * 1024 * 1024)) {
-                showToast('error', 'Ảnh không hợp lệ', 'Chỉ nhận JPEG, PNG hoặc WebP tối đa 5 MB.');
+                setImageError('Chỉ nhận ảnh JPEG, PNG hoặc WebP có dung lượng tối đa 5 MB.');
+                setImageFile(null);
+                setImagePreview(selectedTeacher?.anhDaiDien
+                  ? `${API_BASE_URL}${selectedTeacher.anhDaiDien}`
+                  : `${API_BASE_URL}/images/default-teacher.svg`);
                 event.target.value = '';
                 return;
               }
+              setImageError('');
               setImageFile(file);
               setImagePreview(file
                 ? URL.createObjectURL(file)
@@ -422,6 +456,7 @@ export default function TeachersManagement({ onShowToast }) {
             }}
           />
         </div>
+        <FormFieldError id="teacher-avatar-error">{imageError}</FormFieldError>
         <small>JPEG, PNG hoặc WebP; tối đa 5 MB. Ảnh được tải lên khi lưu hồ sơ.</small>
         {imageFile && <small>{imageFile.name} · {(imageFile.size / 1024 / 1024).toFixed(2)} MB</small>}
       </div>
@@ -429,33 +464,43 @@ export default function TeachersManagement({ onShowToast }) {
         <label htmlFor="teacher-name">Họ và tên giáo viên *</label>
         <input
           id="teacher-name"
+          name="hoTen"
           type="text"
           maxLength={356}
           placeholder="VD: Nguyễn Ngọc Lan"
           value={form.hoTen}
-          onChange={(event) => setForm({ ...form, hoTen: event.target.value })}
+          onChange={(event) => {
+            setForm({ ...form, hoTen: event.target.value });
+            clearFieldError(setFieldErrors, 'hoTen');
+          }}
+          aria-invalid={Boolean(fieldErrors.hoTen)}
+          aria-describedby={fieldErrors.hoTen ? 'teacher-name-error' : undefined}
           required
         />
+        <FormFieldError id="teacher-name-error">{fieldErrors.hoTen}</FormFieldError>
       </div>
       <div className="form-group">
         <label htmlFor="teacher-dob">Ngày sinh</label>
         <input
           id="teacher-dob"
+          name="ngaySinh"
           type="date"
           max={TODAY}
           value={form.ngaySinh}
           aria-invalid={Boolean(fieldErrors.ngaySinh)}
           onChange={(event) => {
             setForm({ ...form, ngaySinh: event.target.value });
-            setFieldErrors({ ...fieldErrors, ngaySinh: '' });
+            clearFieldError(setFieldErrors, 'ngaySinh');
           }}
+          aria-describedby={fieldErrors.ngaySinh ? 'teacher-dob-error' : undefined}
         />
-        {fieldErrors.ngaySinh && <small className="text-red" role="alert">{fieldErrors.ngaySinh}</small>}
+        <FormFieldError id="teacher-dob-error">{fieldErrors.ngaySinh}</FormFieldError>
       </div>
       <div className="form-group">
         <label htmlFor="teacher-phone">Số điện thoại *</label>
         <input
           id="teacher-phone"
+          name="soDienThoai"
           type="tel"
           inputMode="numeric"
           pattern="[0-9]{10}"
@@ -465,16 +510,18 @@ export default function TeachersManagement({ onShowToast }) {
           aria-invalid={Boolean(fieldErrors.soDienThoai)}
           onChange={(event) => {
             setForm({ ...form, soDienThoai: event.target.value });
-            setFieldErrors({ ...fieldErrors, soDienThoai: '' });
+            clearFieldError(setFieldErrors, 'soDienThoai');
           }}
+          aria-describedby={fieldErrors.soDienThoai ? 'teacher-phone-error' : undefined}
           required
         />
-        {fieldErrors.soDienThoai && <small className="text-red" role="alert">{fieldErrors.soDienThoai}</small>}
+        <FormFieldError id="teacher-phone-error">{fieldErrors.soDienThoai}</FormFieldError>
       </div>
       <div className="form-group col-2">
         <label htmlFor="teacher-email">Email liên hệ *</label>
         <input
           id="teacher-email"
+          name="email"
           type="email"
           maxLength={100}
           placeholder="lan.nguyen@babyshark.edu.vn"
@@ -482,27 +529,30 @@ export default function TeachersManagement({ onShowToast }) {
           aria-invalid={Boolean(fieldErrors.email)}
           onChange={(event) => {
             setForm({ ...form, email: event.target.value });
-            setFieldErrors({ ...fieldErrors, email: '' });
+            clearFieldError(setFieldErrors, 'email');
           }}
+          aria-describedby={fieldErrors.email ? 'teacher-email-error' : undefined}
           required
         />
-        {fieldErrors.email && <small className="text-red" role="alert">{fieldErrors.email}</small>}
+        <FormFieldError id="teacher-email-error">{fieldErrors.email}</FormFieldError>
       </div>
       <div className="form-group col-2">
         <label htmlFor="teacher-address">Địa chỉ liên hệ *</label>
         <input
           id="teacher-address"
+          name="diaChiLH"
           type="text"
           maxLength={255}
           value={form.diaChiLH}
           aria-invalid={Boolean(fieldErrors.diaChiLH)}
           onChange={(event) => {
             setForm({ ...form, diaChiLH: event.target.value });
-            setFieldErrors({ ...fieldErrors, diaChiLH: '' });
+            clearFieldError(setFieldErrors, 'diaChiLH');
           }}
+          aria-describedby={fieldErrors.diaChiLH ? 'teacher-address-error' : undefined}
           required
         />
-        {fieldErrors.diaChiLH && <small className="text-red" role="alert">{fieldErrors.diaChiLH}</small>}
+        <FormFieldError id="teacher-address-error">{fieldErrors.diaChiLH}</FormFieldError>
       </div>
       <div className="form-group col-2">
         <label htmlFor="teacher-qualification">Trình độ & bằng cấp chuyên môn</label>
@@ -529,7 +579,7 @@ export default function TeachersManagement({ onShowToast }) {
               {initialAssignment
                 && !classes.some((classItem) => classItem.maLopHoc === initialAssignment.maLopHoc) && (
                   <option value={initialAssignment.maLopHoc}>{initialAssignment.tenLopHoc}</option>
-              )}
+                )}
               {classes.map((classItem) => (
                 <option key={classItem.maLopHoc} value={classItem.maLopHoc}>
                   {classItem.tenLopHoc}
@@ -785,17 +835,28 @@ export default function TeachersManagement({ onShowToast }) {
             <div className="form-group col-2">
               <label>Thêm phân công lớp</label>
               <div className="filter-selects">
-                <select value={assignmentClassId} onChange={(event) => setAssignmentClassId(event.target.value)} disabled={Boolean(operation)}>
+                <select
+                  id="teacher-assignment-class"
+                  value={assignmentClassId}
+                  onChange={(event) => {
+                    setAssignmentClassId(event.target.value);
+                    setAssignmentClassError('');
+                  }}
+                  disabled={Boolean(operation)}
+                  aria-invalid={Boolean(assignmentClassError)}
+                  aria-describedby={assignmentClassError ? 'teacher-assignment-class-error' : undefined}
+                >
                   <option value="">Chọn lớp</option>
                   {classes.map((classItem) => <option key={classItem.maLopHoc} value={classItem.maLopHoc}>{classItem.tenLopHoc}</option>)}
                 </select>
                 <select value={assignmentRole} onChange={(event) => setAssignmentRole(event.target.value)} disabled={Boolean(operation)}>
                   {ASSIGNMENT_ROLES.map((role) => <option key={role} value={role}>{role}</option>)}
                 </select>
-                <button className="btn-primary" type="button" onClick={addAssignment} disabled={Boolean(operation) || !assignmentClassId}>
+                <button className="btn-primary" type="button" onClick={addAssignment} disabled={Boolean(operation)}>
                   {operation === 'add-assignment' ? 'Đang lưu...' : 'Phân công'}
                 </button>
               </div>
+              <FormFieldError id="teacher-assignment-class-error">{assignmentClassError}</FormFieldError>
               {classError && <span className="text-red">{classError}</span>}
             </div>
             <div className="form-group col-2">

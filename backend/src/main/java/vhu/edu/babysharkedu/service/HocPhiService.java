@@ -129,6 +129,8 @@ public class HocPhiService {
                                 detail.getMaChiTietHocPhi(),
                                 detail.getLoaiPhi(),
                                 detail.getNoiDung(),
+                                detail.getSoLuong(),
+                                detail.getDonGia(),
                                 detail.getThanhTien()), Collectors.toList())));
         Map<Integer, ThanhToan> paymentsByInvoice = thanhToanRepository
                 .findAllByHocPhiMaHocPhiIn(invoiceIds)
@@ -149,6 +151,7 @@ public class HocPhiService {
                     invoice.getMaHocPhi(),
                     invoice.getThangApDung(),
                     invoice.getNamApDung(),
+                    invoice.getNgayLap(),
                     invoice.getHanThanhToan(),
                     invoice.getTongTien(),
                     paidAmount,
@@ -158,7 +161,15 @@ public class HocPhiService {
                     child.getMaTre(),
                     (child.getHoTenDemTre() + " " + child.getTenTre()).trim(),
                     child.getLopHoc() == null ? null : child.getLopHoc().getTenLopHoc(),
-                    detailsByInvoice.getOrDefault(invoice.getMaHocPhi(), List.of()));
+                    detailsByInvoice.getOrDefault(invoice.getMaHocPhi(), List.of()),
+                    payment == null ? null : new PhuHuynhHocPhiDTO.ThanhToanDTO(
+                            payment.getMaThanhToan(),
+                            payment.getSoTienThanhToan(),
+                            payment.getPhuongThucThanhToan(),
+                            payment.getMaGiaoDich(),
+                            payment.getThoiGianThanhToan(),
+                            payment.getTrangThai(),
+                            payment.getNoiDung()));
         }).toList();
     }
 

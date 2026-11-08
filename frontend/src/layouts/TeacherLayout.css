@@ -227,18 +227,6 @@
   padding: 98px 32px 36px;
 }
 
-.teacher-demo-notice {
-  width: fit-content;
-  margin: 0 0 16px auto;
-  padding: 7px 11px;
-  color: #587987;
-  background: rgba(224, 246, 250, .8);
-  border: 1px solid #ccebf0;
-  border-radius: 999px;
-  font-size: 10px;
-  font-weight: 650;
-}
-
 .teacher-page {
   display: grid;
   gap: 20px;
@@ -776,11 +764,6 @@
 
   .teacher-content {
     padding: 86px 15px 26px;
-  }
-
-  .teacher-demo-notice {
-    margin-bottom: 12px;
-    font-size: 9px;
   }
 
   .teacher-welcome {

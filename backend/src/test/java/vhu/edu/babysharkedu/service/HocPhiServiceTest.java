@@ -21,7 +21,9 @@ import vhu.edu.babysharkedu.dto.GhiNhanThanhToanRequest;
 import vhu.edu.babysharkedu.dto.VietQrDTO;
 import vhu.edu.babysharkedu.dto.TaoHocPhiRequest;
 import vhu.edu.babysharkedu.model.HocPhi;
+import vhu.edu.babysharkedu.model.ChiTietHocPhi;
 import vhu.edu.babysharkedu.model.PhuHuynh;
+import vhu.edu.babysharkedu.model.PhuHuynhTre;
 import vhu.edu.babysharkedu.model.ThanhToan;
 import vhu.edu.babysharkedu.model.TreEm;
 import vhu.edu.babysharkedu.repository.ChiTietHocPhiRepository;
@@ -216,6 +218,60 @@ class HocPhiServiceTest {
 
         assertEquals(HttpStatus.NOT_FOUND, exception.getStatusCode());
         verify(vietQrService, never()).taoMaQr(any(), any());
+    }
+
+    @Test
+    void parentInvoiceListContainsOnlyLinkedChildrenAndFullFeeAndPaymentDetails() {
+        PhuHuynh parent = new PhuHuynh();
+        parent.setMaPhuHuynh(4);
+        when(phuHuynhRepository.findByTaiKhoanMaTaiKhoan(91)).thenReturn(Optional.of(parent));
+
+        PhuHuynhTre link = new PhuHuynhTre();
+        link.setTreEm(invoice.getTreEm());
+        when(phuHuynhTreRepository.findAllByPhuHuynhMaPhuHuynhOrderByTreEmMaTreAsc(4))
+                .thenReturn(List.of(link));
+        invoice.setThangApDung(10);
+        invoice.setNamApDung(2026);
+        invoice.setNgayLap(java.time.LocalDateTime.of(2026, 10, 1, 9, 0));
+        invoice.setHanThanhToan(java.time.LocalDateTime.of(2026, 10, 31, 23, 59));
+        invoice.setTrangThai("Đã thanh toán");
+        invoice.getTreEm().setHoTenDemTre("Nguyễn Minh");
+        invoice.getTreEm().setTenTre("An");
+        when(hocPhiRepository.findAllWithTreAndLopByTreIds(List.of(7))).thenReturn(List.of(invoice));
+
+        ChiTietHocPhi detail = new ChiTietHocPhi();
+        detail.setMaChiTietHocPhi(81);
+        detail.setHocPhi(invoice);
+        detail.setLoaiPhi("Tiền ăn");
+        detail.setNoiDung("Tháng 10");
+        detail.setSoLuong(20);
+        detail.setDonGia(new BigDecimal("25000"));
+        detail.setThanhTien(new BigDecimal("500000"));
+        when(chiTietRepository.findAllByHocPhiMaHocPhiInOrderByHocPhiMaHocPhiAscMaChiTietHocPhiAsc(
+                List.of(10))).thenReturn(List.of(detail));
+
+        ThanhToan payment = new ThanhToan();
+        payment.setMaThanhToan(91);
+        payment.setHocPhi(invoice);
+        payment.setSoTienThanhToan(new BigDecimal("1250000"));
+        payment.setPhuongThucThanhToan("Chuyển khoản");
+        payment.setMaGiaoDich("TX-91");
+        payment.setThoiGianThanhToan(java.time.LocalDateTime.of(2026, 10, 15, 11, 30));
+        payment.setTrangThai("Thành công");
+        payment.setNoiDung("Thanh toán học phí tháng 10");
+        when(thanhToanRepository.findAllByHocPhiMaHocPhiIn(List.of(10))).thenReturn(List.of(payment));
+
+        var result = service.layTheoPhuHuynh(parentPrincipal(91));
+
+        verify(hocPhiRepository).findAllWithTreAndLopByTreIds(List.of(7));
+        assertEquals(1, result.size());
+        assertEquals(invoice.getNgayLap(), result.get(0).ngayLap());
+        assertEquals(new BigDecimal("1250000"), result.get(0).daThanhToan());
+        assertEquals(20, result.get(0).chiTiet().get(0).soLuong());
+        assertEquals(new BigDecimal("25000"), result.get(0).chiTiet().get(0).donGia());
+        assertEquals(91, result.get(0).thanhToan().maThanhToan());
+        assertEquals("TX-91", result.get(0).thanhToan().maGiaoDich());
+        assertEquals("Thanh toán học phí tháng 10", result.get(0).thanhToan().noiDung());
     }
 
     private GhiNhanThanhToanRequest paymentRequest(String amount, Integer parentId) {

@@ -2,6 +2,9 @@ package vhu.edu.babysharkedu.controller;
 
 import java.util.List;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.NotNull;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -15,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.validation.annotation.Validated;
 
 import vhu.edu.babysharkedu.dto.CapNhatTrangThaiMonAnRequest;
 import vhu.edu.babysharkedu.dto.MonAnDTO;
@@ -24,6 +28,7 @@ import vhu.edu.babysharkedu.service.MonAnService;
 @RestController
 @RequestMapping("/api/mon-an")
 @PreAuthorize("hasRole('ADMIN')")
+@Validated
 public class MonAnController {
     private final MonAnService monAnService;
 
@@ -40,31 +45,34 @@ public class MonAnController {
     }
 
     @GetMapping("/{maMonAn}")
-    public MonAnDTO layChiTiet(@PathVariable Integer maMonAn) {
+    public MonAnDTO layChiTiet(@PathVariable @Positive(message = "Mã món ăn phải là số nguyên dương.") Integer maMonAn) {
         return monAnService.layChiTiet(maMonAn);
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public MonAnDTO them(@RequestBody MonAnRequest request) {
+    public MonAnDTO them(
+            @Valid @RequestBody @NotNull(message = "Dữ liệu yêu cầu không được để trống.") MonAnRequest request) {
         return monAnService.them(request);
     }
 
     @PutMapping("/{maMonAn}")
-    public MonAnDTO capNhat(@PathVariable Integer maMonAn, @RequestBody MonAnRequest request) {
+    public MonAnDTO capNhat(
+            @PathVariable @Positive(message = "Mã món ăn phải là số nguyên dương.") Integer maMonAn,
+            @Valid @RequestBody @NotNull(message = "Dữ liệu yêu cầu không được để trống.") MonAnRequest request) {
         return monAnService.capNhat(maMonAn, request);
     }
 
     @DeleteMapping("/{maMonAn}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void xoa(@PathVariable Integer maMonAn) {
+    public void xoa(@PathVariable @Positive(message = "Mã món ăn phải là số nguyên dương.") Integer maMonAn) {
         monAnService.xoa(maMonAn);
     }
 
     @PatchMapping("/{maMonAn}/trang-thai")
     public MonAnDTO capNhatTrangThai(
-            @PathVariable Integer maMonAn,
-            @RequestBody CapNhatTrangThaiMonAnRequest request) {
+            @PathVariable @Positive(message = "Mã món ăn phải là số nguyên dương.") Integer maMonAn,
+            @Valid @RequestBody @NotNull(message = "Dữ liệu yêu cầu không được để trống.") CapNhatTrangThaiMonAnRequest request) {
         return monAnService.capNhatTrangThai(
                 maMonAn, request == null ? null : request.trangThai());
     }

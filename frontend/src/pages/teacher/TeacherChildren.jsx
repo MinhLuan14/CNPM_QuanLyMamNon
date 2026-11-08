@@ -1,17 +1,10 @@
 import { Baby, Search, Users } from 'lucide-react'
 
 export default function TeacherChildren({ data }) {
-  const { classroom, children } = data
+  const { children } = data
 
   return (
     <div className="teacher-page">
-      <div className="teacher-page-heading">
-        <div>
-          <span className="teacher-eyebrow">HỒ SƠ LỚP PHỤ TRÁCH</span>
-          <h2>Danh sách trẻ</h2>
-          <p>{classroom ? `Lớp ${classroom.name} · ` : ''}Danh sách trẻ thuộc các lớp đang được phân công.</p>
-        </div>
-      </div>
       <section className="teacher-panel">
         <div className="teacher-panel-heading">
           <div><Users size={19} /><h3>Hồ sơ trẻ ({children.length})</h3></div>
