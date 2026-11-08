@@ -82,7 +82,8 @@ public class SecurityConfig {
                                 "/api/auth/login",
                                 "/api/auth/yeu-cau-ho-tro",
                                 "/api/auth/forgot-username",
-                                "/api/auth/forgot-password").permitAll()
+                                "/api/auth/forgot-password")
+                        .permitAll()
                         .requestMatchers("/api/accounts/**").hasRole("ADMIN")
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().permitAll())
@@ -97,15 +98,29 @@ public class SecurityConfig {
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
+
         configuration.setAllowedOrigins(List.of(
+                // Frontend khi chạy môi trường phát triển
                 "http://localhost:5173",
-                "http://127.0.0.1:5173"));
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("Content-Type", "X-XSRF-TOKEN"));
+                "http://127.0.0.1:5173",
+
+                // Frontend khi chạy Docker
+                "http://localhost:8080",
+                "http://127.0.0.1:8080"));
+
+        configuration.setAllowedMethods(List.of(
+                "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+
+        configuration.setAllowedHeaders(List.of(
+                "Content-Type",
+                "X-XSRF-TOKEN"));
+
         configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+
         source.registerCorsConfiguration("/**", configuration);
+
         return source;
     }
 

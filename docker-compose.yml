@@ -1,0 +1,61 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+
+    container_name: babyshark-backend
+
+    restart: unless-stopped
+
+    environment:
+      SERVER_PORT: 8888
+
+      SPRING_DATASOURCE_URL: "jdbc:sqlserver://host.docker.internal:1433;databaseName=QLMamNon;encrypt=true;trustServerCertificate=true"
+      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: com.microsoft.sqlserver.jdbc.SQLServerDriver
+
+      # Không tự động thay đổi cấu trúc database
+      SPRING_JPA_HIBERNATE_DDL_AUTO: none
+
+      BABYSHARK_UPLOAD_DIR: uploads
+
+      APP_FRONTEND_URL: http://localhost:8080
+
+      VIETQR_CLIENT_ID: ${VIETQR_CLIENT_ID}
+      VIETQR_API_KEY: ${VIETQR_API_KEY}
+      VIETQR_MB_ACCOUNT_NO: ${MB_ACCOUNT_NO}
+      VIETQR_MB_ACCOUNT_NAME: ${MB_ACCOUNT_NAME}
+
+      SPRING_MAIL_HOST: ${MAIL_HOST}
+      SPRING_MAIL_PORT: ${MAIL_PORT}
+      SPRING_MAIL_USERNAME: ${MAIL_USERNAME}
+      SPRING_MAIL_PASSWORD: ${MAIL_PASSWORD}
+      SPRING_MAIL_FROM: ${MAIL_FROM}
+
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH: "true"
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE: "true"
+
+      ACCOUNT_RECOVERY_HASH_SECRET: ${ACCOUNT_RECOVERY_HASH_SECRET}
+
+    volumes:
+      - ./backend/uploads:/app/uploads
+
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+
+    container_name: babyshark-frontend
+
+    restart: unless-stopped
+
+    ports:
+      - "8080:80"
+
+    depends_on:
+      - backend
