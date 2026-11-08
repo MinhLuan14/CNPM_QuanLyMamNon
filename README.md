@@ -380,7 +380,7 @@ Các file sao lưu chứa dữ liệu demo được lưu riêng, không đưa l�
 
 Tài liệu và dữ liệu bàn giao dự án:
 
-**[Mở thư mục tài liệu BabySharkEdu trên Google Drive](https://drive.google.com/drive/u/0/folders/1coHlxd9gqhIKSOiSFRqiMu74qA9nt1-G)**
+**[Mở thư mục tài liệu BabySharkEdu trên Google Drive](https://drive.google.com/file/d/1NKWw_0R_fHseNMj7kVR0utbXNM_WJyoF/view?usp=drive_link)**
 
 ## 🧰 12. Công cụ phát triển
 
