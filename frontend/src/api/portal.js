@@ -46,6 +46,13 @@ export async function getTeacherMenus(classId) {
     return mapPublishedMenus(data);
 }
 
+export async function getTeacherChildDetails(childId) {
+    return readJson(
+        `/api/tre-em/${encodeURIComponent(childId)}`,
+        'Không thể tải hồ sơ trẻ.',
+    );
+}
+
 export async function loadParentPortalData() {
     const childProfiles = await readJson('/api/phu-huynh/ho-so-cac-be', 'Không thể tải hồ sơ học sinh.');
     const parentProfile = childProfiles.phuHuynh || {};
@@ -112,6 +119,7 @@ export async function loadParentPortalData() {
         .map((invoice) => ({
             ...invoice.payment,
             invoiceId: invoice.id,
+            childId: invoice.childId,
             childName: invoice.childName,
             month: invoice.month,
         }));
@@ -154,25 +162,69 @@ export async function loadTeacherPortalData() {
     const profile = await readJson('/api/profile', 'Không thể tải hồ sơ giáo viên.');
     const assignments = (profile.phanCong || []).filter((assignment) => assignment.dangPhuTrach);
     const classResults = await Promise.allSettled(assignments.map(readTeacherClass));
-    const classes = classResults
-        .filter((result) => result.status === 'fulfilled')
-        .map((result) => result.value);
-    const primaryClass = classes[0] || null;
-    const children = classes.flatMap(({ classroom, children: classChildren }) => classChildren.map((child) => ({
-        id: child.maTre,
-        name: fullName(child.hoTenDemTre, child.tenTre),
-        nickname: child.tenTre || '',
-        dob: child.ngayThangNamSinh || '',
-        status: child.trangThaiHocTap || 'Chưa xác định',
-        className: classroom.tenLopHoc,
+    const classes = classResults.map((result, index) => {
+        const assignment = assignments[index];
+        const role = assignment.vaiTro || 'Chưa cập nhật';
+        const roleCategory = assignment.vaiTro
+            ? role.toLocaleLowerCase('vi-VN').includes('chủ nhiệm')
+                ? 'Phụ trách chính'
+                : 'Hỗ trợ'
+            : 'Chưa cập nhật';
+
+        if (result.status === 'rejected') {
+            return {
+                id: assignment.maLopHoc,
+                name: assignment.tenLopHoc || `Lớp ${assignment.maLopHoc}`,
+                role,
+                roleCategory,
+                assignmentEnd: assignment.ngayKetThuc,
+                children: [],
+                loadError: result.reason?.message || 'Không thể tải dữ liệu lớp.',
+            };
+        }
+
+        const { classroom, children: classChildren } = result.value;
+        return {
+            id: assignment.maLopHoc,
+            name: classroom.tenLopHoc || assignment.tenLopHoc || `Lớp ${assignment.maLopHoc}`,
+            role,
+            roleCategory,
+            assignmentEnd: assignment.ngayKetThuc,
+            classroom,
+            children: classChildren.map((child) => ({
+                id: child.maTre,
+                name: fullName(child.hoTenDemTre, child.tenTre),
+                nickname: child.tenTre || '',
+                dob: child.ngayThangNamSinh || '',
+                birthPlace: child.noiSinh || '',
+                status: child.trangThaiHocTap || 'Chưa có dữ liệu',
+                classId: child.maLopHoc ?? assignment.maLopHoc,
+                className: child.tenLopHoc || classroom.tenLopHoc || assignment.tenLopHoc || '',
+                imageUrl: child.anhDaiDien || '',
+            })),
+        };
+    });
+    const primaryClass = classes.find((classroom) => !classroom.loadError) || null;
+    const children = classes.flatMap(({ children: classChildren }) => classChildren.map((child) => ({
+        id: child.id,
+        name: child.name,
+        nickname: child.nickname,
+        dob: child.dob,
+        status: child.status,
+        className: child.className,
+        classId: child.classId,
+        imageUrl: child.imageUrl,
         parentName: '',
         parentRelationship: '',
         parentPhone: '',
     })));
 
     return {
-        teacher: { name: profile.hoTen || profile.tenDangNhap || '' },
-        classroom: primaryClass ? {
+        teacher: {
+            name: profile.hoTen || profile.tenDangNhap || '',
+            imageUrl: profile.anhDaiDien || '',
+        },
+        classroom: primaryClass?.classroom ? {
             name: primaryClass.classroom.tenLopHoc,
             grade: primaryClass.classroom.doTuoi || 'Chưa cập nhật',
             ageGroup: primaryClass.classroom.doTuoi || 'Chưa cập nhật',
@@ -183,6 +235,7 @@ export async function loadTeacherPortalData() {
             capacity: primaryClass.classroom.soLuongToiDa ?? null,
         } : null,
         classCount: classes.length,
+        classes,
         children,
         menuClasses: assignments.map((assignment) => ({
             id: assignment.maLopHoc,

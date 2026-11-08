@@ -11,6 +11,7 @@ import {
   X,
 } from 'lucide-react'
 import { createInvoiceQr } from '../../api/hocPhi'
+import ParentChildAvatar from '../../components/parent/ParentChildAvatar'
 
 const money = (value) => `${new Intl.NumberFormat('vi-VN').format(value ?? 0)} ₫`
 const isQrImage = (value) => /^data:image\/png;base64,[A-Za-z0-9+/]+={0,2}$/.test(value || '')
@@ -49,6 +50,7 @@ export default function ParentTuition({ invoices, children = [], isAvailable = t
     .sort((left, right) => (right.year - left.year)
       || (right.monthNumber - left.monthNumber)
       || (right.id - left.id))
+  const childrenById = new Map(children.map((child) => [String(child.id), child]))
   const totalAmount = filteredInvoices.reduce((sum, invoice) => sum + invoice.totalAmount, 0)
   const paidTotal = filteredInvoices.reduce((sum, invoice) => sum + invoice.paidAmount, 0)
   const remainingTotal = filteredInvoices.reduce((sum, invoice) => sum + invoice.remainingAmount, 0)
@@ -152,6 +154,10 @@ export default function ParentTuition({ invoices, children = [], isAvailable = t
         ) : invoices.length && filteredInvoices.length ? filteredInvoices.map((invoice) => (
           <article className="parent-panel parent-invoice-card" key={invoice.id}>
             <div className="parent-invoice-heading">
+              <ParentChildAvatar
+                child={childrenById.get(String(invoice.childId))}
+                className="parent-invoice-avatar"
+              />
               <div>
                 <small>KỲ {invoice.month}{invoice.className ? ` · ${invoice.className}` : ''}</small>
                 <h3>{invoice.childName}</h3>

@@ -175,7 +175,8 @@ public class ProfileService {
                     parent.getDiaChiLH(),
                     null,
                     children,
-                    List.of());
+                    List.of(),
+                    null);
         }
         if ("GIAOVIEN".equals(principal.getVaiTro())) {
             GiaoVien teacher = giaoVienRepository.findByTaiKhoanMaTaiKhoan(principal.getMaTaiKhoan())
@@ -196,7 +197,10 @@ public class ProfileService {
                     teacher.getDiaChiLH(),
                     teacher.getTrinhDoChuyenMon(),
                     List.of(),
-                    assignments);
+                    assignments,
+                    teacher.getAnhDaiDien() == null || teacher.getAnhDaiDien().isBlank()
+                            ? null
+                            : "/api/giao-vien/" + teacher.getMaGiaoVien() + "/anh-dai-dien");
         }
         throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Vai trò này không có hồ sơ cá nhân.");
     }

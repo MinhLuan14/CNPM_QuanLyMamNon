@@ -1,6 +1,5 @@
-import { useState } from 'react'
 import { CalendarDays, GraduationCap, Heart, Mail, MapPin, Phone, UserRound, Users } from 'lucide-react'
-import { API_BASE_URL } from '../../config'
+import ParentChildAvatar from '../../components/parent/ParentChildAvatar'
 
 const dateLabel = (value) => {
   if (!value) return 'Chưa cập nhật'
@@ -9,8 +8,6 @@ const dateLabel = (value) => {
 }
 
 export default function ParentChildProfile({ portal }) {
-  const [unavailableAvatars, setUnavailableAvatars] = useState(() => new Set())
-
   if (!portal.children.length) {
     return (
       <div className="parent-page">
@@ -28,21 +25,7 @@ export default function ParentChildProfile({ portal }) {
         {portal.children.map((child) => (
           <article className="parent-panel parent-profile-card" key={child.id}>
             <div className="parent-profile-hero">
-              <span className="parent-profile-avatar">
-                {child.avatarUrl && !unavailableAvatars.has(child.id) ? (
-                  <img
-                    src={child.avatarUrl.startsWith('http')
-                      ? child.avatarUrl
-                      : `${API_BASE_URL}${child.avatarUrl}`}
-                    alt={`Ảnh đại diện của ${child.fullName}`}
-                    onError={() => setUnavailableAvatars((current) => new Set(current).add(child.id))}
-                  />
-                ) : (
-                  <span aria-hidden="true">
-                    {child.firstName?.trim().slice(0, 1) || child.fullName?.trim().slice(0, 1) || '—'}
-                  </span>
-                )}
-              </span>
+              <ParentChildAvatar child={child} className="parent-profile-avatar" />
               <div className="parent-profile-identity">
                 <h3>{child.fullName}</h3>
                 <span className="parent-profile-class">{child.className || 'Chưa phân lớp'}</span>

@@ -1,4 +1,5 @@
 import { LogOut, Menu } from 'lucide-react'
+import TeacherAvatar from './TeacherAvatar'
 
 export default function TeacherHeader({ active, user, teacher, onMenuClick, onLogout }) {
   const displayName = teacher?.name || user?.tenDangNhap || 'Giáo viên'
@@ -19,7 +20,11 @@ export default function TeacherHeader({ active, user, teacher, onMenuClick, onLo
         </div>
       </div>
       <div className="teacher-header-user">
-        <span className="teacher-user-avatar">{displayName.slice(0, 1).toUpperCase()}</span>
+        <TeacherAvatar
+          className="teacher-user-avatar"
+          imageUrl={teacher?.imageUrl}
+          name={displayName}
+        />
         <div>
           <strong>{displayName}</strong>
           <span>Giáo viên</span>

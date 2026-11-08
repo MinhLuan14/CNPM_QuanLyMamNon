@@ -3,6 +3,7 @@ package vhu.edu.babysharkedu.service;
 import java.util.List;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -23,14 +24,17 @@ public class LopHocService {
     private final LopHocRepository lopHocRepository;
     private final TreEmRepository treEmRepository;
     private final PhanCongGiaoVienRepository phanCongGiaoVienRepository;
+    private final GiaoVienPhanCongAccessService giaoVienPhanCongAccessService;
 
     public LopHocService(
             LopHocRepository lopHocRepository,
             TreEmRepository treEmRepository,
-            PhanCongGiaoVienRepository phanCongGiaoVienRepository) {
+            PhanCongGiaoVienRepository phanCongGiaoVienRepository,
+            GiaoVienPhanCongAccessService giaoVienPhanCongAccessService) {
         this.lopHocRepository = lopHocRepository;
         this.treEmRepository = treEmRepository;
         this.phanCongGiaoVienRepository = phanCongGiaoVienRepository;
+        this.giaoVienPhanCongAccessService = giaoVienPhanCongAccessService;
     }
 
     @Transactional(readOnly = true)
@@ -76,7 +80,8 @@ public class LopHocService {
     }
 
     @Transactional(readOnly = true)
-    public List<TreEmDTO> layTreEm(Integer maLopHoc) {
+    public List<TreEmDTO> layTreEm(Integer maLopHoc, Authentication authentication) {
+        giaoVienPhanCongAccessService.requireClassAccess(authentication, maLopHoc);
         timLopHoc(maLopHoc);
         return treEmRepository.findAllByLopHocMaLopHocOrderByMaTre(maLopHoc).stream()
                 .map(tre -> new TreEmDTO(

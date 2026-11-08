@@ -1,6 +1,8 @@
 package vhu.edu.babysharkedu.service;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -15,6 +17,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import vhu.edu.babysharkedu.model.PhuHuynh;
+import vhu.edu.babysharkedu.model.LopHoc;
 import vhu.edu.babysharkedu.model.TaiKhoan;
 import vhu.edu.babysharkedu.model.TreEm;
 import vhu.edu.babysharkedu.repository.HocPhiRepository;
@@ -36,6 +39,9 @@ class TreEmServiceAuthorizationTest {
     @Mock
     private PhuHuynhTreRepository phuHuynhTreRepository;
 
+    @Mock
+    private GiaoVienPhanCongAccessService giaoVienPhanCongAccessService;
+
     @Test
     void phuHuynhKhongXemDuocChiTietTreChuaLienKet() {
         LopHocRepository lopHocRepository = mock(LopHocRepository.class);
@@ -47,7 +53,8 @@ class TreEmServiceAuthorizationTest {
                 lopHocRepository,
                 hocPhiRepository,
                 phuHuynhTreRepository,
-                phuHuynhRepository);
+                phuHuynhRepository,
+                giaoVienPhanCongAccessService);
 
         TaiKhoan account = new TaiKhoan();
         account.setMaTaiKhoan(99);
@@ -67,6 +74,43 @@ class TreEmServiceAuthorizationTest {
         parent.setMaPhuHuynh(12);
         when(phuHuynhRepository.findByTaiKhoanMaTaiKhoan(99)).thenReturn(Optional.of(parent));
         when(phuHuynhTreRepository.existsByPhuHuynhMaPhuHuynhAndTreEmMaTre(12, 34)).thenReturn(false);
+
+        assertThrows(AccessDeniedException.class, () -> service.layChiTiet(34, authentication));
+    }
+
+    @Test
+    void giaoVienKhongXemDuocChiTietTreNgoaiLopDuocPhanCong() {
+        LopHocRepository lopHocRepository = mock(LopHocRepository.class);
+        HocPhiRepository hocPhiRepository = mock(HocPhiRepository.class);
+        TaiKhoanRepository taiKhoanRepository = mock(TaiKhoanRepository.class);
+        PasswordEncoder passwordEncoder = mock(PasswordEncoder.class);
+        TreEmService service = new TreEmService(
+                treEmRepository,
+                lopHocRepository,
+                hocPhiRepository,
+                phuHuynhTreRepository,
+                phuHuynhRepository,
+                giaoVienPhanCongAccessService);
+
+        TaiKhoan account = new TaiKhoan();
+        account.setMaTaiKhoan(52);
+        account.setVaiTro("GIAOVIEN");
+        TaiKhoanPrincipal principal = new TaiKhoanPrincipal(
+                account, new TaiKhoanService(
+                        taiKhoanRepository,
+                        passwordEncoder,
+                        new TaiKhoanCapPhatService(taiKhoanRepository, passwordEncoder)));
+        Authentication authentication = mock(Authentication.class);
+        when(authentication.getPrincipal()).thenReturn(principal);
+
+        LopHoc classroom = new LopHoc();
+        classroom.setMaLopHoc(8);
+        TreEm child = new TreEm();
+        child.setMaTre(34);
+        child.setLopHoc(classroom);
+        when(treEmRepository.findById(34)).thenReturn(Optional.of(child));
+        doThrow(new AccessDeniedException("forbidden"))
+                .when(giaoVienPhanCongAccessService).requireClassAccess(eq(authentication), eq(8));
 
         assertThrows(AccessDeniedException.class, () -> service.layChiTiet(34, authentication));
     }

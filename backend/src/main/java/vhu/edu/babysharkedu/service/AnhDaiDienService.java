@@ -128,6 +128,34 @@ public class AnhDaiDienService {
         return docAnh(teacher.getAnhDaiDien(), DEFAULT_TEACHER_IMAGE);
     }
 
+    @Transactional(readOnly = true)
+    public HinhAnh layAnhGiaoVienNeuCo(Integer maGiaoVien) {
+        GiaoVien teacher = giaoVienRepository.findById(maGiaoVien)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Không tìm thấy hồ sơ giáo viên."));
+        String relativePath = teacher.getAnhDaiDien();
+        if (relativePath == null || relativePath.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Giáo viên chưa có ảnh đại diện.");
+        }
+
+        try {
+            Path path = resolveStoredPath(relativePath);
+            if (!Files.isRegularFile(path)) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy ảnh đại diện.");
+            }
+            MediaType mediaType = switch (extensionOf(path)) {
+                case ".jpg", ".jpeg" -> MediaType.IMAGE_JPEG;
+                case ".png" -> MediaType.IMAGE_PNG;
+                case ".webp" -> MediaType.parseMediaType("image/webp");
+                default -> throw new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Định dạng ảnh đại diện không được hỗ trợ.");
+            };
+            return new HinhAnh(new FileSystemResource(path), mediaType);
+        } catch (IllegalArgumentException exception) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy ảnh đại diện.", exception);
+        }
+    }
+
     private String luuTep(MultipartFile file, String category) {
         if (file == null || file.isEmpty() || file.getSize() > MAX_FILE_SIZE) {
             throw new ResponseStatusException(

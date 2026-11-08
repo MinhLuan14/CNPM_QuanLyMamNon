@@ -824,3 +824,1499 @@
     display: none;
   }
 }
+
+/* Teacher portal design system: scoped so other roles keep their own styling. */
+.teacher-app-shell {
+  --teacher-ink: #20384a;
+  --teacher-muted: #526b7b;
+  --teacher-subtle: #667d8c;
+  --teacher-border: #dce8ee;
+  --teacher-surface: #fff;
+  --teacher-canvas: #f3f8fa;
+  --teacher-blue: #147eae;
+  --teacher-teal: #168d83;
+  color: var(--teacher-ink);
+  font-family: 'Be Vietnam Pro', 'Segoe UI', sans-serif;
+}
+
+.teacher-app-shell :where(button, input, select, textarea) {
+  font-family: inherit;
+}
+
+.teacher-app-shell .teacher-main {
+  margin-left: 280px;
+  background:
+    radial-gradient(ellipse at 92% 8%, rgba(35, 166, 178, .07), transparent 30%),
+    var(--teacher-canvas);
+}
+
+.teacher-app-shell .sidebar {
+  width: 280px;
+  padding: 0 16px 14px;
+  background: linear-gradient(180deg, #f0f9fc 0%, #fff 62%);
+  border-right-color: var(--teacher-border);
+  box-shadow: 4px 0 20px rgba(22, 72, 91, .055);
+  font-family: inherit;
+}
+
+.teacher-app-shell .brand {
+  min-height: 104px;
+  gap: 12px;
+  padding: 14px 12px;
+  margin: 0 -16px 16px;
+  background: linear-gradient(120deg, #117fae 0%, #159c9a 100%);
+  border-radius: 0 0 18px 18px;
+  box-shadow: 0 5px 16px rgba(17, 127, 174, .16);
+}
+
+.teacher-app-shell .brand-logo {
+  width: 56px;
+  height: 56px;
+  padding: 3px;
+  border-radius: 14px;
+}
+
+.teacher-app-shell .brand h2 {
+  margin-bottom: 4px;
+  color: #fff;
+  font-size: 21px;
+  letter-spacing: -.5px;
+}
+
+.teacher-app-shell .brand span {
+  max-width: 150px;
+  color: rgba(255, 255, 255, .86);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.teacher-app-shell .menu-label {
+  padding: 0 10px;
+  margin: 8px 0 12px;
+  color: #607989;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .06em;
+}
+
+.teacher-app-shell .sidebar-menu {
+  gap: 6px;
+}
+
+.teacher-app-shell .menu-item {
+  min-height: 48px;
+  gap: 12px;
+  padding: 0 13px;
+  color: #526b7b;
+  background: transparent;
+  border-color: transparent;
+  border-radius: 11px;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.teacher-app-shell .menu-item svg {
+  width: 19px;
+  height: 19px;
+  color: #607d8b;
+}
+
+.teacher-app-shell .menu-item:hover {
+  color: #116f96;
+  background: #eaf6f8;
+  border-color: #d9ebef;
+  box-shadow: none;
+  transform: none;
+}
+
+.teacher-app-shell .menu-item.active {
+  color: #116f96;
+  background: #e4f3f6;
+  border-color: #cfe7eb;
+  box-shadow: inset 3px 0 #1aa091;
+  font-weight: 650;
+}
+
+.teacher-app-shell .menu-item.active::before {
+  display: none;
+}
+
+.teacher-app-shell .menu-item.active svg {
+  color: #168d83;
+}
+
+.teacher-app-shell .sidebar-bottom {
+  padding-top: 10px;
+  border-color: var(--teacher-border);
+}
+
+.teacher-app-shell .sidebar-version {
+  color: var(--teacher-subtle);
+  font-size: 13px;
+}
+
+.teacher-app-shell .teacher-header {
+  inset-inline-start: 280px;
+  height: 78px;
+  padding-inline: clamp(20px, 2.2vw, 36px);
+  background: linear-gradient(105deg, #147fae 0%, #15968f 100%);
+  box-shadow: 0 4px 18px rgba(18, 87, 111, .14);
+}
+
+.teacher-app-shell .teacher-breadcrumb {
+  margin-bottom: 3px;
+  color: rgba(255, 255, 255, .84);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.teacher-app-shell .teacher-header h1 {
+  font-size: clamp(21px, 1.8vw, 26px);
+  line-height: 1.25;
+}
+
+.teacher-app-shell .teacher-header-user {
+  gap: 11px;
+}
+
+.teacher-app-shell .teacher-user-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  object-fit: cover;
+  overflow: hidden;
+}
+
+.teacher-app-shell .profile-avatar {
+  overflow: hidden;
+  font-size: 19px;
+  font-weight: 700;
+}
+
+.teacher-app-shell img.profile-avatar {
+  object-fit: cover;
+}
+
+.teacher-app-shell .teacher-header-user strong {
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.teacher-app-shell .teacher-header-user span:not(.teacher-user-avatar) {
+  font-size: 13px;
+}
+
+.teacher-app-shell .teacher-logout {
+  min-height: 42px;
+  margin-left: 8px;
+  padding: 0 13px;
+  border-radius: 10px;
+  font-size: 14px;
+}
+
+.teacher-app-shell .teacher-menu-toggle {
+  border: 0;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, .14);
+}
+
+.teacher-app-shell .teacher-content {
+  padding: 100px clamp(18px, 2.2vw, 36px) 36px;
+}
+
+.teacher-app-shell .teacher-page {
+  width: 100%;
+  max-width: 1480px;
+  gap: 20px;
+}
+
+.teacher-app-shell .teacher-page-heading h2 {
+  font-size: clamp(26px, 2.2vw, 30px);
+  line-height: 1.3;
+}
+
+.teacher-app-shell .teacher-page-heading p {
+  color: var(--teacher-muted);
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.teacher-app-shell .teacher-eyebrow {
+  font-size: 12px;
+  letter-spacing: .08em;
+}
+
+.teacher-app-shell .teacher-welcome {
+  min-height: 176px;
+  padding: 26px clamp(22px, 2.7vw, 38px);
+  border-radius: 18px;
+  box-shadow: 0 8px 22px rgba(15, 112, 137, .13);
+}
+
+.teacher-app-shell .teacher-welcome h2 {
+  margin: 9px 0 8px;
+  font-size: clamp(27px, 2.6vw, 32px);
+  line-height: 1.25;
+}
+
+.teacher-app-shell .teacher-welcome p {
+  color: rgba(255, 255, 255, .93);
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.teacher-app-shell .teacher-welcome-art {
+  width: 78px;
+  height: 78px;
+  border-radius: 21px;
+}
+
+.teacher-app-shell .teacher-stat-grid {
+  gap: 14px;
+}
+
+.teacher-app-shell .teacher-stat-card,
+.teacher-app-shell .teacher-panel {
+  background: var(--teacher-surface);
+  border-color: var(--teacher-border);
+  border-radius: 15px;
+  box-shadow: 0 3px 12px rgba(27, 68, 84, .045);
+}
+
+.teacher-app-shell .teacher-stat-card {
+  min-height: 104px;
+  gap: 13px;
+  padding: 17px;
+}
+
+.teacher-app-shell .teacher-stat-card > .teacher-stat-icon {
+  width: 46px;
+  height: 46px;
+  flex: 0 0 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 13px;
+}
+
+.teacher-app-shell .teacher-stat-icon svg {
+  display: block;
+  flex: 0 0 22px;
+  width: 22px;
+  height: 22px;
+}
+
+.teacher-app-shell .teacher-stat-grid--overview {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.teacher-app-shell .teacher-stat-card span {
+  color: var(--teacher-muted);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.teacher-app-shell .teacher-stat-card strong {
+  margin-top: 5px;
+  color: var(--teacher-ink);
+  font-size: 24px;
+  line-height: 1.25;
+}
+
+.teacher-app-shell .teacher-dashboard-grid {
+  grid-template-columns: minmax(0, 1.12fr) minmax(320px, .88fr);
+  align-items: start;
+  gap: 18px;
+}
+
+.teacher-app-shell .teacher-dashboard-grid--class-focus {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.teacher-app-shell .teacher-dashboard-grid--class-focus > .teacher-panel {
+  width: 100%;
+}
+
+.teacher-app-shell .teacher-dashboard-grid > .teacher-page {
+  gap: 18px;
+}
+
+.teacher-app-shell .teacher-panel {
+  min-width: 0;
+  padding: 21px;
+}
+
+.teacher-app-shell .teacher-panel-heading {
+  gap: 12px;
+  margin-bottom: 17px;
+}
+
+.teacher-app-shell .teacher-panel-heading > div {
+  gap: 10px;
+}
+
+.teacher-app-shell .teacher-panel-heading h3 {
+  color: var(--teacher-ink);
+  font-size: 19px;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.teacher-app-shell .teacher-panel-heading p {
+  color: var(--teacher-muted);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.teacher-app-shell .teacher-link-button {
+  min-height: 40px;
+  padding: 7px 4px;
+  color: #116f96;
+  font-size: 14px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.teacher-app-shell .teacher-class-summary {
+  gap: 13px;
+  padding: 15px;
+  border-radius: 12px;
+}
+
+.teacher-app-shell .teacher-class-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 13px;
+}
+
+.teacher-app-shell .teacher-class-summary strong {
+  color: var(--teacher-ink);
+  font-size: 17px;
+  line-height: 1.4;
+}
+
+.teacher-app-shell .teacher-class-summary span,
+.teacher-app-shell .teacher-class-room {
+  color: var(--teacher-muted);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.teacher-app-shell .teacher-child-list,
+.teacher-app-shell .teacher-notice-list,
+.teacher-app-shell .teacher-task-list,
+.teacher-app-shell .teacher-meal-list {
+  gap: 9px;
+}
+
+.teacher-app-shell .teacher-child-row,
+.teacher-app-shell .teacher-notice-row,
+.teacher-app-shell .teacher-task-row,
+.teacher-app-shell .teacher-meal-row {
+  gap: 12px;
+  padding: 12px;
+  background: #fbfdfe;
+  border-color: #e5eef1;
+  border-radius: 11px;
+}
+
+.teacher-app-shell .teacher-child-avatar {
+  width: 40px;
+  height: 40px;
+  font-size: 16px;
+  border-radius: 50%;
+}
+
+.teacher-app-shell .teacher-child-avatar-image {
+  display: block;
+  flex: 0 0 40px;
+  object-fit: cover;
+  object-position: center;
+}
+
+.teacher-app-shell .teacher-child-row strong,
+.teacher-app-shell .teacher-notice-row strong,
+.teacher-app-shell .teacher-task-row strong,
+.teacher-app-shell .teacher-meal-row strong {
+  color: var(--teacher-ink);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.teacher-app-shell .teacher-child-row span,
+.teacher-app-shell .teacher-notice-row span,
+.teacher-app-shell .teacher-task-row span,
+.teacher-app-shell .teacher-meal-row span {
+  color: var(--teacher-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.teacher-app-shell .teacher-empty {
+  padding: 20px;
+  color: var(--teacher-muted);
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.teacher-app-shell .teacher-class-details,
+.teacher-app-shell .teacher-profile-grid {
+  gap: 13px;
+}
+
+.teacher-app-shell .teacher-detail-item {
+  padding: 15px;
+  border-radius: 11px;
+}
+
+.teacher-app-shell .teacher-detail-item span {
+  color: var(--teacher-muted);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.teacher-app-shell .teacher-detail-item strong {
+  color: var(--teacher-ink);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.teacher-app-shell .teacher-child-table-wrap {
+  max-width: 100%;
+  border: 1px solid var(--teacher-border);
+  border-radius: 11px;
+  scrollbar-color: #b7cfd8 transparent;
+}
+
+.teacher-app-shell .teacher-child-table {
+  min-width: 720px;
+  font-size: 14px;
+}
+
+.teacher-app-shell .teacher-child-table th {
+  padding: 13px 12px;
+  color: #455f70;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .02em;
+  white-space: nowrap;
+}
+
+.teacher-app-shell .teacher-child-table td {
+  padding: 14px 12px;
+  color: var(--teacher-muted);
+  font-size: 14px;
+  line-height: 1.5;
+  vertical-align: middle;
+}
+
+.teacher-app-shell .teacher-child-table td strong {
+  color: var(--teacher-ink);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.teacher-app-shell .teacher-status-pill {
+  padding: 5px 10px;
+  font-size: 13px;
+  line-height: 1.35;
+  white-space: nowrap;
+}
+
+.teacher-app-shell .teacher-week-menu {
+  gap: 15px;
+}
+
+.teacher-app-shell .teacher-menu-day h3 {
+  color: var(--teacher-ink);
+  font-size: 17px;
+}
+
+.teacher-app-shell .teacher-menu-day small {
+  font-size: 13px;
+}
+
+.teacher-app-shell .teacher-meal-row {
+  padding: 12px;
+}
+
+.teacher-app-shell .teacher-task-check {
+  width: 20px;
+  height: 20px;
+  margin: 2px 0 0;
+}
+
+.teacher-app-shell .teacher-task-tag {
+  margin-top: 8px !important;
+  padding: 5px 9px;
+  font-size: 13px !important;
+}
+
+.teacher-app-shell .teacher-notice-icon {
+  width: 40px;
+  height: 40px;
+}
+
+.teacher-app-shell .teacher-notice-row time {
+  color: var(--teacher-muted);
+  font-size: 13px;
+}
+
+/* Shared menu viewer and profile page are styled only inside teacher portal. */
+.teacher-app-shell .menu-week-viewer {
+  gap: 18px;
+  font-family: inherit;
+}
+
+.teacher-app-shell .menu-week-toolbar,
+.teacher-app-shell .menu-day-card,
+.teacher-app-shell .menu-viewer-message,
+.teacher-app-shell .menu-viewer-person,
+.teacher-app-shell .menu-viewer-class {
+  border-color: var(--teacher-border);
+  border-radius: 13px;
+  box-shadow: 0 3px 12px rgba(27, 68, 84, .04);
+}
+
+.teacher-app-shell .menu-week-toolbar button {
+  min-height: 44px;
+  font-size: 14px;
+}
+
+.teacher-app-shell .menu-week-title span,
+.teacher-app-shell .menu-week-title small,
+.teacher-app-shell .menu-published-badge {
+  font-size: 14px;
+}
+
+.teacher-app-shell .menu-today-badge {
+  font-size: 13px;
+}
+
+.teacher-app-shell .menu-day-grid {
+  gap: 14px;
+}
+
+.teacher-app-shell .menu-meal-group li p {
+  font-size: 14px;
+}
+
+.teacher-app-shell .profile-page {
+  gap: 18px;
+  color: var(--teacher-ink);
+  font-family: inherit;
+}
+
+.teacher-app-shell .profile-card {
+  border-color: var(--teacher-border);
+  border-radius: 14px;
+  box-shadow: 0 3px 12px rgba(27, 68, 84, .045);
+}
+
+.teacher-app-shell .profile-hero {
+  padding: 22px 24px;
+  background: linear-gradient(110deg, #edf8fa, #f8fbfc);
+}
+
+.teacher-app-shell .profile-identity h3 {
+  color: var(--teacher-ink);
+  font-size: 21px;
+  line-height: 1.35;
+}
+
+.teacher-app-shell .profile-identity span,
+.teacher-app-shell .profile-section-title > span,
+.teacher-app-shell .profile-field label,
+.teacher-app-shell .profile-password-field > span {
+  color: var(--teacher-muted);
+  font-size: 14px;
+}
+
+.teacher-app-shell .profile-status {
+  font-size: 13px;
+}
+
+.teacher-app-shell .profile-section-title h3 {
+  color: var(--teacher-ink);
+  font-size: 18px;
+}
+
+.teacher-app-shell .profile-input-wrap,
+.teacher-app-shell .profile-readonly,
+.teacher-app-shell .profile-password-field > div {
+  min-height: 46px;
+  border-color: #d7e4e9;
+  border-radius: 9px;
+}
+
+.teacher-app-shell .profile-input-wrap input,
+.teacher-app-shell .profile-readonly span,
+.teacher-app-shell .profile-related-row strong,
+.teacher-app-shell .profile-security-row > div strong {
+  color: var(--teacher-ink);
+  font-size: 15px;
+}
+
+.teacher-app-shell .profile-related-row > div span,
+.teacher-app-shell .profile-security-row > div span,
+.teacher-app-shell .profile-security-section > p,
+.teacher-app-shell .profile-empty,
+.teacher-app-shell .profile-password-form small {
+  color: var(--teacher-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.teacher-app-shell .profile-related-tag {
+  font-size: 13px;
+}
+
+.teacher-app-shell .profile-save-button,
+.teacher-app-shell .profile-reset-button,
+.teacher-app-shell .profile-password-button,
+.teacher-app-shell .profile-state {
+  font-size: 14px;
+}
+
+.teacher-app-shell .profile-password-field input {
+  font: inherit;
+  font-size: 15px;
+}
+
+.teacher-app-shell .profile-state {
+  color: var(--teacher-muted);
+}
+
+.teacher-app-shell .form-field-error {
+  font-size: 14px;
+}
+
+.teacher-app-shell .modal-container {
+  font-family: inherit;
+}
+
+.teacher-app-shell .modal-header h3 {
+  font-size: 19px;
+}
+
+.teacher-app-shell .modal-body {
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.teacher-app-shell .modal-buttons .btn-primary,
+.teacher-app-shell .modal-buttons .btn-secondary,
+.teacher-app-shell .profile-state .btn-secondary {
+  min-height: 42px;
+  font-size: 14px;
+}
+
+@media (max-width: 1050px) {
+  .teacher-app-shell .teacher-dashboard-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .teacher-app-shell .teacher-main {
+    margin-left: 0;
+  }
+
+  .teacher-app-shell .sidebar {
+    width: min(304px, 88vw);
+  }
+
+  .teacher-app-shell .teacher-header {
+    inset-inline: 0;
+    height: 72px;
+    padding-inline: 14px;
+  }
+
+  .teacher-app-shell .teacher-menu-toggle {
+    display: grid;
+    place-items: center;
+  }
+
+  .teacher-app-shell .teacher-header h1 {
+    font-size: 20px;
+  }
+
+  .teacher-app-shell .teacher-breadcrumb {
+    font-size: 12px;
+  }
+
+  .teacher-app-shell .teacher-header-user > div,
+  .teacher-app-shell .teacher-logout span {
+    display: none;
+  }
+
+  .teacher-app-shell .teacher-logout {
+    width: 42px;
+    min-width: 42px;
+    min-height: 42px;
+    justify-content: center;
+    margin-left: 0;
+    padding: 0;
+  }
+
+  .teacher-app-shell .teacher-content {
+    padding: 90px 18px 28px;
+  }
+
+  .teacher-app-shell .teacher-stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .teacher-app-shell .teacher-welcome {
+    min-height: 160px;
+  }
+
+  .teacher-app-shell .teacher-welcome h2 {
+    font-size: 27px;
+  }
+}
+
+@media (max-width: 520px) {
+  .teacher-app-shell .teacher-content {
+    padding: 86px 13px 24px;
+  }
+
+  .teacher-app-shell .teacher-page {
+    gap: 15px;
+  }
+
+  .teacher-app-shell .teacher-stat-grid,
+  .teacher-app-shell .teacher-class-details,
+  .teacher-app-shell .teacher-profile-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .teacher-app-shell .teacher-stat-card {
+    min-height: 82px;
+    padding: 14px;
+  }
+
+  .teacher-app-shell .teacher-stat-card span {
+    font-size: 14px;
+  }
+
+  .teacher-app-shell .teacher-panel {
+    padding: 16px;
+  }
+
+  .teacher-app-shell .teacher-panel-heading h3 {
+    font-size: 17px;
+  }
+
+  .teacher-app-shell .teacher-panel-heading {
+    align-items: flex-start;
+  }
+
+  .teacher-app-shell .teacher-link-button {
+    min-height: 36px;
+    font-size: 13px;
+  }
+
+  .teacher-app-shell .teacher-class-summary {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .teacher-app-shell .teacher-class-room {
+    grid-column: 2;
+    margin-top: -6px;
+  }
+
+  .teacher-app-shell .teacher-notice-row {
+    align-items: flex-start;
+  }
+
+  .teacher-app-shell .teacher-notice-row time {
+    display: none;
+  }
+
+  .teacher-app-shell .profile-hero,
+  .teacher-app-shell .profile-edit-form,
+  .teacher-app-shell .profile-related-section,
+  .teacher-app-shell .profile-security-section {
+    padding: 17px;
+  }
+
+  .teacher-app-shell .profile-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .teacher-app-shell .profile-field-wide {
+    grid-column: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .teacher-app-shell *,
+  .teacher-app-shell *::before,
+  .teacher-app-shell *::after {
+    scroll-behavior: auto !important;
+    transition-duration: .01ms !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+.teacher-app-shell .teacher-children-page {
+  min-height: calc(100vh - 136px);
+  gap: 20px;
+  padding: clamp(14px, 2vw, 26px);
+  background: #edf5f8;
+  border: 1px solid #e1edf1;
+  border-radius: 18px;
+}
+
+.teacher-app-shell .teacher-children-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.teacher-app-shell .teacher-children-summary span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 8px 13px;
+  color: #285d78;
+  background: #fff;
+  border: 1px solid #d5e7ee;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.teacher-app-shell .teacher-children-panel {
+  padding: clamp(18px, 2.2vw, 28px);
+  background: #fff;
+  border: 1px solid #d5e7ee;
+  border-radius: 16px;
+  box-shadow: 0 8px 22px rgb(22 59 86 / 6%);
+}
+
+.teacher-app-shell .teacher-children-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin: -4px 0 20px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid #e6eff3;
+}
+
+.teacher-app-shell .teacher-children-toolbar .teacher-panel-heading {
+  display: block;
+  margin: 0;
+  min-width: 0;
+}
+
+.teacher-app-shell .teacher-children-toolbar .teacher-panel-heading > div {
+  gap: 11px;
+  margin-bottom: 5px;
+  color: #079ead;
+}
+
+.teacher-app-shell .teacher-children-toolbar .teacher-panel-heading > div > svg {
+  display: grid;
+  place-self: center;
+  flex: 0 0 40px;
+  width: 40px;
+  height: 40px;
+  padding: 9px;
+  color: #078b9a;
+  background: #e4f6f7;
+  border-radius: 12px;
+}
+
+.teacher-app-shell .teacher-children-toolbar .teacher-panel-heading h3 {
+  color: #163b56;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.teacher-app-shell .teacher-children-toolbar .teacher-panel-heading p {
+  margin: 0 0 0 51px;
+  color: #648096;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.teacher-app-shell .teacher-children-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: min(100%, 360px);
+  min-height: 48px;
+  padding: 0 15px;
+  color: #079ead;
+  background: #f7fbfc;
+  border: 1px solid #d5e7ee;
+  border-radius: 12px;
+  transition: background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.teacher-app-shell .teacher-children-search:focus-within {
+  background: #fff;
+  border-color: #079ead;
+  box-shadow: 0 0 0 3px rgb(7 158 173 / 14%);
+}
+
+.teacher-app-shell .teacher-children-search > svg {
+  flex: 0 0 18px;
+}
+
+.teacher-app-shell .teacher-children-search input {
+  width: 100%;
+  min-width: 0;
+  padding: 8px 0;
+  color: #163b56;
+  background: transparent;
+  border: 0;
+  outline: 0;
+  font: inherit;
+  font-size: 14px;
+}
+
+.teacher-app-shell .teacher-children-search input::placeholder {
+  color: #648096;
+  opacity: 1;
+}
+
+.teacher-app-shell .teacher-class-accordion {
+  display: grid;
+  gap: 14px;
+}
+
+.teacher-app-shell .teacher-class-card {
+  position: relative;
+  overflow: hidden;
+  background: #f0fafc;
+  border: 1px solid #d5e7ee;
+  border-left: 4px solid #079ead;
+  border-radius: 16px;
+  box-shadow: 0 3px 10px rgb(22 59 86 / 4%);
+  transition: background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.teacher-app-shell .teacher-class-card:focus-within,
+.teacher-app-shell .teacher-class-card:hover {
+  background: #eaf7fa;
+  border-color: #b8dce4;
+  border-left-color: #079ead;
+  box-shadow: 0 7px 17px rgb(22 59 86 / 8%);
+  transform: translateY(-1px);
+}
+
+.teacher-app-shell .teacher-class-card-trigger {
+  display: grid;
+  grid-template-columns: 48px minmax(130px, 1fr) auto minmax(140px, auto) 38px;
+  align-items: center;
+  gap: 15px;
+  width: 100%;
+  min-height: 88px;
+  padding: 16px 18px;
+  color: #163b56;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+}
+
+.teacher-app-shell .teacher-class-card-trigger:focus-visible,
+.teacher-app-shell .teacher-class-child:focus-visible,
+.teacher-app-shell .teacher-child-detail-close:focus-visible {
+  outline: 3px solid rgb(39 152 170 / 35%);
+  outline-offset: -3px;
+}
+
+.teacher-app-shell .teacher-class-card-icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  color: #078b9a;
+  background: #dff3f6;
+  border: 1px solid #cce9ed;
+  border-radius: 14px;
+}
+
+.teacher-app-shell .teacher-class-card-icon svg {
+  display: block;
+  width: 23px;
+  height: 23px;
+}
+
+.teacher-app-shell .teacher-class-card-title {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.teacher-app-shell .teacher-class-card-title strong {
+  overflow: hidden;
+  color: #163b56;
+  font-size: 18px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.teacher-app-shell .teacher-class-card-title > span,
+.teacher-app-shell .teacher-assignment-role {
+  color: #648096;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.teacher-app-shell .teacher-class-card-title > span {
+  display: inline-flex;
+  justify-self: start;
+  align-items: center;
+  min-height: 25px;
+  padding: 3px 9px;
+  color: #32728a;
+  background: #e0f2f6;
+  border: 1px solid #d0e9ef;
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+.teacher-app-shell .teacher-assignment-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  padding: 5px 12px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.teacher-app-shell .teacher-assignment-badge.is-primary {
+  color: #176b60;
+  background: #d9f4ee;
+  border-color: #c5eae2;
+}
+
+.teacher-app-shell .teacher-assignment-badge.is-support {
+  color: #4e6386;
+  background: #e9eef8;
+  border-color: #dce4f2;
+}
+
+.teacher-app-shell .teacher-class-card-trigger > svg:last-child {
+  display: grid;
+  place-self: center;
+  width: 38px;
+  height: 38px;
+  padding: 9px;
+  color: #137f90;
+  background: #e1f3f6;
+  border: 1px solid #cfe9ed;
+  border-radius: 11px;
+  transition: color 160ms ease, background-color 160ms ease, transform 160ms ease;
+}
+
+.teacher-app-shell .teacher-class-card-trigger > svg.is-expanded {
+  color: #fff;
+  background: #079ead;
+  border-color: #079ead;
+  transform: rotate(180deg);
+}
+
+.teacher-app-shell .teacher-class-card-content {
+  padding: 15px 18px 18px;
+  background: #fff;
+  border-top: 1px solid #dcebf0;
+}
+
+.teacher-app-shell .teacher-class-child-list {
+  display: grid;
+  gap: 9px;
+}
+
+.teacher-app-shell .teacher-class-child {
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 13px;
+  width: 100%;
+  min-height: 74px;
+  padding: 11px 13px;
+  color: inherit;
+  text-align: left;
+  background: #f8fbfc;
+  border: 1px solid #e1edf1;
+  border-radius: 12px;
+  cursor: pointer;
+  font: inherit;
+  transition: background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.teacher-app-shell .teacher-class-child:hover {
+  background: #eff8fa;
+  border-color: #cce5eb;
+  box-shadow: 0 3px 9px rgb(22 59 86 / 5%);
+}
+
+.teacher-app-shell .teacher-class-child:hover .teacher-class-child-info strong {
+  color: #087f95;
+}
+
+.teacher-app-shell .teacher-children-avatar {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  object-fit: cover;
+  color: #157e8c;
+  background: #dff3f6;
+  border-radius: 50%;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.teacher-app-shell .teacher-children-avatar-fallback {
+  display: grid;
+}
+
+.teacher-app-shell .teacher-class-child-info {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.teacher-app-shell .teacher-class-child-info strong {
+  overflow: hidden;
+  color: #163b56;
+  font-size: 15px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.teacher-app-shell .teacher-class-child-info > span {
+  color: #648096;
+  font-size: 14px;
+}
+
+.teacher-app-shell .teacher-children-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 4px 9px;
+  color: #176b60;
+  background: #d9f4ee;
+  border: 1px solid #c5eae2;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.teacher-app-shell .teacher-children-load-error,
+.teacher-app-shell .teacher-child-detail-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 13px 10px;
+  color: #a63f39;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.teacher-app-shell .teacher-children-page-error {
+  margin-bottom: 12px;
+  padding-inline: 12px;
+  background: #fff7f5;
+  border: 1px solid #f3ddd8;
+  border-radius: 9px;
+}
+
+.teacher-app-shell .teacher-children-class-empty,
+.teacher-app-shell .teacher-children-footnote {
+  color: #648096;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.teacher-app-shell .teacher-children-class-empty {
+  padding: 20px 14px;
+  background: #f8fbfc;
+  border: 1px dashed #cbdfe6;
+  border-radius: 12px;
+}
+
+.teacher-app-shell .teacher-children-empty {
+  display: grid;
+  justify-items: center;
+  gap: 9px;
+  padding: 38px 18px;
+  color: #648096;
+  text-align: center;
+  background: #f5fafb;
+  border: 1px dashed #c7dce4;
+  border-radius: 14px;
+}
+
+.teacher-app-shell .teacher-children-empty svg {
+  color: #45a5b4;
+}
+
+.teacher-app-shell .teacher-children-empty strong {
+  color: #163b56;
+  font-size: 16px;
+  font-weight: 650;
+}
+
+.teacher-app-shell .teacher-children-empty span {
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.teacher-app-shell .teacher-children-footnote {
+  margin: 0;
+}
+
+.teacher-app-shell .teacher-child-detail-backdrop {
+  position: fixed;
+  z-index: 1200;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgb(19 39 52 / 48%);
+}
+
+.teacher-app-shell .teacher-child-detail-dialog {
+  width: min(100%, 560px);
+  max-height: min(90vh, 760px);
+  overflow: auto;
+  background: #fff;
+  border: 1px solid #e5eef1;
+  border-radius: 16px;
+  box-shadow: 0 22px 70px rgb(16 47 62 / 24%);
+}
+
+.teacher-app-shell .teacher-child-detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 20px 22px;
+  border-bottom: 1px solid #edf2f4;
+}
+
+.teacher-app-shell .teacher-child-detail-eyebrow {
+  color: #168b9d;
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.teacher-app-shell .teacher-child-detail-header h3 {
+  margin: 4px 0 0;
+  color: var(--teacher-ink);
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.teacher-app-shell .teacher-child-detail-close {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  color: #526c79;
+  background: #f3f8f9;
+  border: 0;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.teacher-app-shell .teacher-child-detail-state {
+  padding: 32px 22px;
+  color: var(--teacher-muted);
+  font-size: 15px;
+  text-align: center;
+}
+
+.teacher-app-shell .teacher-child-detail-content {
+  padding: 22px;
+}
+
+.teacher-app-shell .teacher-child-detail-identity {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #edf2f4;
+}
+
+.teacher-app-shell .teacher-child-detail-identity .teacher-children-avatar {
+  width: 62px;
+  height: 62px;
+  font-size: 22px;
+}
+
+.teacher-app-shell .teacher-child-detail-identity h4 {
+  margin: 0 0 5px;
+  color: var(--teacher-ink);
+  font-size: 18px;
+  font-weight: 650;
+}
+
+.teacher-app-shell .teacher-child-detail-identity > div > span {
+  color: var(--teacher-muted);
+  font-size: 14px;
+}
+
+.teacher-app-shell .teacher-child-detail-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  margin: 0;
+  padding-top: 20px;
+}
+
+.teacher-app-shell .teacher-child-detail-fields > div {
+  min-width: 0;
+}
+
+.teacher-app-shell .teacher-child-detail-fields dt {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--teacher-muted);
+  font-size: 14px;
+}
+
+.teacher-app-shell .teacher-child-detail-fields dt svg {
+  flex: 0 0 auto;
+  color: #168b9d;
+}
+
+.teacher-app-shell .teacher-child-detail-fields dd {
+  margin: 7px 0 0 23px;
+  color: var(--teacher-ink);
+  font-size: 15px;
+  font-weight: 550;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 720px) {
+  .teacher-app-shell .teacher-children-page {
+    min-height: calc(100vh - 118px);
+    padding: 14px;
+    border-radius: 15px;
+  }
+
+  .teacher-app-shell .teacher-children-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .teacher-app-shell .teacher-children-search {
+    width: 100%;
+  }
+
+  .teacher-app-shell .teacher-class-card-trigger {
+    grid-template-columns: 42px minmax(0, 1fr) 38px;
+    gap: 10px;
+    padding: 13px;
+  }
+
+  .teacher-app-shell .teacher-class-card-icon {
+    width: 42px;
+    height: 42px;
+  }
+
+  .teacher-app-shell .teacher-assignment-badge,
+  .teacher-app-shell .teacher-assignment-role {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  .teacher-app-shell .teacher-assignment-role {
+    margin-top: -6px;
+  }
+
+  .teacher-app-shell .teacher-class-card-trigger > svg:last-child {
+    grid-column: 3;
+    grid-row: 1;
+  }
+
+  .teacher-app-shell .teacher-class-child {
+    grid-template-columns: 42px minmax(0, 1fr);
+  }
+
+  .teacher-app-shell .teacher-class-child .teacher-children-status {
+    grid-column: 2;
+    justify-self: start;
+    margin-top: -5px;
+  }
+}
+
+@media (max-width: 520px) {
+  .teacher-app-shell .teacher-children-panel {
+    padding: 16px;
+  }
+
+  .teacher-app-shell .teacher-children-summary {
+    gap: 7px;
+  }
+
+  .teacher-app-shell .teacher-children-summary span {
+    min-height: 38px;
+    font-size: 14px;
+  }
+
+  .teacher-app-shell .teacher-class-card-title strong {
+    font-size: 15px;
+  }
+
+  .teacher-app-shell .teacher-class-card-content {
+    padding: 12px 12px 14px;
+  }
+
+  .teacher-app-shell .teacher-class-child {
+    gap: 10px;
+    padding: 10px;
+  }
+
+  .teacher-app-shell .teacher-child-detail-backdrop {
+    align-items: end;
+    padding: 0;
+  }
+
+  .teacher-app-shell .teacher-child-detail-dialog {
+    width: 100%;
+    max-height: 90vh;
+    border-radius: 16px 16px 0 0;
+  }
+
+  .teacher-app-shell .teacher-child-detail-header,
+  .teacher-app-shell .teacher-child-detail-content {
+    padding: 18px;
+  }
+
+  .teacher-app-shell .teacher-child-detail-fields {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 15px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .teacher-app-shell .teacher-class-card,
+  .teacher-app-shell .teacher-class-card-trigger > svg:last-child {
+    transition-duration: .01ms;
+  }
+}

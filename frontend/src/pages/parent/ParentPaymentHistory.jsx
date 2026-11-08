@@ -1,4 +1,5 @@
 import { CreditCard, History } from 'lucide-react'
+import ParentChildAvatar from '../../components/parent/ParentChildAvatar'
 
 const money = (value) => `${new Intl.NumberFormat('vi-VN').format(value ?? 0)} ₫`
 const dateTime = (value) => {
@@ -7,9 +8,25 @@ const dateTime = (value) => {
   return Number.isNaN(date.getTime()) ? 'Chưa cập nhật' : date.toLocaleString('vi-VN')
 }
 
-export default function ParentPaymentHistory({ payments, isAvailable = true, error = '', onRetry }) {
+const statusClass = (status) => {
+  const value = status?.toLocaleLowerCase('vi') || ''
+  if (value.includes('thành công') || value.includes('thanh cong') || value.includes('hoàn thành') || value.includes('đã thanh toán')) {
+    return 'success'
+  }
+  if (value.includes('đang xử lý') || value.includes('đang chờ') || value.includes('chờ xử lý') || value.includes('pending')) {
+    return 'processing'
+  }
+  if (value.includes('thất bại') || value.includes('that bai') || value.includes('hủy') || value.includes('lỗi') || value.includes('failed')) {
+    return 'failed'
+  }
+  return 'unknown'
+}
+
+export default function ParentPaymentHistory({ payments, children = [], isAvailable = true, error = '', onRetry }) {
+  const childrenById = new Map(children.map((child) => [String(child.id), child]))
+
   return (
-    <div className="parent-page">
+    <div className="parent-page parent-payment-history-page">
       <section className="parent-panel parent-history-panel">
         {!isAvailable ? (
           <div className="parent-empty-large" role="alert">
@@ -28,13 +45,25 @@ export default function ParentPaymentHistory({ payments, isAvailable = true, err
                     <td>{payment.id ?? 'Chưa cập nhật'}</td>
                     <td>HP-{payment.invoiceId}</td>
                     <td>{dateTime(payment.paidAt)}</td>
-                    <td>{payment.childName}</td>
+                    <td>
+                      <span className="parent-payment-child">
+                        <ParentChildAvatar
+                          child={childrenById.get(String(payment.childId))}
+                          className="parent-history-child-avatar"
+                        />
+                        <span>{payment.childName}</span>
+                      </span>
+                    </td>
                     <td>{payment.month}</td>
-                    <td><strong>{payment.amount == null ? 'Chưa cập nhật' : money(payment.amount)}</strong></td>
+                    <td className="parent-payment-amount"><strong>{payment.amount == null ? 'Chưa cập nhật' : money(payment.amount)}</strong></td>
                     <td>{payment.method || 'Chưa cập nhật'}</td>
                     <td>{payment.transactionCode || '—'}</td>
-                    <td><span className="parent-history-status">{payment.status || 'Chưa cập nhật'}</span></td>
-                    <td>{payment.description || 'Chưa cập nhật'}</td>
+                    <td>
+                      <span className={`parent-history-status ${statusClass(payment.status)}`}>
+                        {payment.status || 'Chưa cập nhật'}
+                      </span>
+                    </td>
+                    <td className="parent-payment-description">{payment.description || 'Chưa cập nhật'}</td>
                   </tr>
                 ))}
               </tbody>
@@ -44,7 +73,10 @@ export default function ParentPaymentHistory({ payments, isAvailable = true, err
           <div className="parent-empty-large"><History size={28} /><h3>Chưa có giao dịch</h3><p>Lịch sử thanh toán sẽ xuất hiện sau khi giao dịch được nhà trường ghi nhận.</p></div>
         )}
       </section>
-      <p className="parent-history-note"><CreditCard size={15} /> Nếu thông tin giao dịch chưa chính xác, vui lòng liên hệ nhà trường.</p>
+      <p className="parent-history-note">
+        <CreditCard size={16} aria-hidden="true" />
+        <span>Nếu thông tin giao dịch chưa chính xác, vui lòng liên hệ nhà trường.</span>
+      </p>
     </div>
   )
 }

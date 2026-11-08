@@ -1,5 +1,4 @@
 import {
-  Bell,
   Baby,
   CreditCard,
   LayoutDashboard,
@@ -15,7 +14,6 @@ const menuItems = [
   { title: 'Thực đơn', icon: Utensils },
   { title: 'Học phí & tiền ăn', icon: Wallet },
   { title: 'Lịch sử thanh toán', icon: CreditCard },
-  { title: 'Thông báo', icon: Bell },
   { title: 'Thông tin cá nhân', icon: UserRound },
 ]
 

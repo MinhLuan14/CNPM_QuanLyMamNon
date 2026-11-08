@@ -58,8 +58,9 @@ public class TreEmController {
     @GetMapping("/tim-kiem")
     @PreAuthorize("hasAnyRole('ADMIN', 'GIAOVIEN')")
     public List<TreEmDTO> timKiem(
-            @RequestParam @NotBlank(message = "Từ khóa tìm kiếm không được để trống.") String keyword) {
-        return treEmService.timKiem(keyword);
+            @RequestParam @NotBlank(message = "Từ khóa tìm kiếm không được để trống.") String keyword,
+            Authentication authentication) {
+        return treEmService.timKiem(keyword, authentication);
     }
 
     @GetMapping("/chua-phan-lop")
@@ -84,8 +85,9 @@ public class TreEmController {
     @GetMapping("/lop/{maLopHoc}")
     @PreAuthorize("hasAnyRole('ADMIN', 'GIAOVIEN')")
     public List<TreEmDTO> layTheoLop(
-            @PathVariable @Positive(message = "Mã lớp học phải là số nguyên dương.") Integer maLopHoc) {
-        return treEmService.layTheoLop(maLopHoc);
+            @PathVariable @Positive(message = "Mã lớp học phải là số nguyên dương.") Integer maLopHoc,
+            Authentication authentication) {
+        return treEmService.layTheoLop(maLopHoc, authentication);
     }
 
     @GetMapping("/{maTre}")

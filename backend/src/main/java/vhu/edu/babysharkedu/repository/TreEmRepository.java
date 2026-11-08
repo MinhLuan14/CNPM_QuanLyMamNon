@@ -15,6 +15,8 @@ public interface TreEmRepository extends JpaRepository<TreEm, Integer> {
 
     List<TreEm> findAllByLopHocMaLopHocOrderByMaTre(Integer maLopHoc);
 
+    List<TreEm> findAllByLopHocMaLopHocInOrderByMaTre(List<Integer> maLopHoc);
+
     List<TreEm> findAllByLopHocIsNullOrderByMaTre();
 
     List<TreEm> findAllByHoTenDemTreContainingIgnoreCaseOrTenTreContainingIgnoreCaseOrderByMaTre(

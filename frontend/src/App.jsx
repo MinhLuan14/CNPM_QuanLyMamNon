@@ -19,14 +19,11 @@ import ParentChildProfile from './pages/parent/ParentChildProfile'
 import ParentMenu from './pages/parent/ParentMenu'
 import ParentTuition from './pages/parent/ParentTuition'
 import ParentPaymentHistory from './pages/parent/ParentPaymentHistory'
-import ParentNotifications from './pages/parent/ParentNotifications'
 import TeacherLayout from './layouts/TeacherLayout'
 import TeacherDashboard from './pages/teacher/TeacherDashboard'
 import TeacherClass from './pages/teacher/TeacherClass'
 import TeacherChildren from './pages/teacher/TeacherChildren'
 import TeacherMenu from './pages/teacher/TeacherMenu'
-import TeacherTasks from './pages/teacher/TeacherTasks'
-import TeacherNotifications from './pages/teacher/TeacherNotifications'
 import ProfilePage from './pages/ProfilePage'
 import Toast from './components/Toast'
 import { authRequest, fetchCsrfToken, responseError } from './api/auth'
@@ -55,7 +52,6 @@ const roleRoutes = {
     'Thực đơn': '/dashboard/parent/menu',
     'Học phí & tiền ăn': '/dashboard/parent/tuition',
     'Lịch sử thanh toán': '/dashboard/parent/payments',
-    'Thông báo': '/dashboard/parent/notifications',
     'Thông tin cá nhân': '/dashboard/parent/profile',
   },
   GIAOVIEN: {
@@ -63,8 +59,6 @@ const roleRoutes = {
     'Lớp học của tôi': '/dashboard/teacher/classes',
     'Danh sách trẻ': '/dashboard/teacher/children',
     'Thực đơn': '/dashboard/teacher/menu',
-    'Công việc & báo cáo': '/dashboard/teacher/tasks',
-    'Thông báo': '/dashboard/teacher/notifications',
     'Thông tin cá nhân': '/dashboard/teacher/profile',
   },
 }
@@ -190,13 +184,11 @@ function ParentPortal({ user, onLogout, path, navigate }) {
     case 'Lịch sử thanh toán':
       page = <ParentPaymentHistory
         payments={portal.payments}
+        children={portal.children}
         isAvailable={portal.availability.payments}
         error={portal.invoiceError}
         onRetry={loadPortal}
       />
-      break
-    case 'Thông báo':
-      page = <ParentNotifications notifications={portal.notifications} isAvailable={portal.availability.notifications} />
       break
     case 'Thông tin cá nhân':
       page = <ProfilePage onShowToast={setToast} linkedChildren={portal.children} />
@@ -227,6 +219,7 @@ function TeacherPortal({ user, onLogout, path, navigate }) {
   const [toast, setToast] = useState(null)
   const [data, setData] = useState(null)
   const [portalError, setPortalError] = useState('')
+  const previousActivePage = useRef(active)
   const navigateToPage = (page) => navigate(pathForPage('GIAOVIEN', page))
 
   const loadPortal = useCallback(async () => {
@@ -242,6 +235,54 @@ function TeacherPortal({ user, onLogout, path, navigate }) {
     const timeoutId = window.setTimeout(loadPortal, 0)
     return () => window.clearTimeout(timeoutId)
   }, [loadPortal])
+
+  useEffect(() => {
+    const previousPage = previousActivePage.current
+    previousActivePage.current = active
+    if (active !== 'Danh sách trẻ' || previousPage === active) return
+
+    setData(null)
+    loadPortal()
+  }, [active, loadPortal])
+
+  useEffect(() => {
+    if (active !== 'Danh sách trẻ') return undefined
+
+    let refreshInProgress = false
+    const refresh = () => {
+      if (refreshInProgress || document.visibilityState !== 'visible') return
+      refreshInProgress = true
+      setData(null)
+      loadPortal().finally(() => {
+        refreshInProgress = false
+      })
+    }
+
+    const intervalId = window.setInterval(refresh, 60_000)
+    window.addEventListener('focus', refresh)
+    document.addEventListener('visibilitychange', refresh)
+    return () => {
+      window.clearInterval(intervalId)
+      window.removeEventListener('focus', refresh)
+      document.removeEventListener('visibilitychange', refresh)
+    }
+  }, [active, loadPortal])
+
+  useEffect(() => {
+    if (active !== 'Danh sách trẻ' || !data) return undefined
+
+    const nextExpiration = data.classes
+      .map((classroom) => Date.parse(classroom.assignmentEnd || ''))
+      .filter((timestamp) => Number.isFinite(timestamp) && timestamp > Date.now())
+      .sort((left, right) => left - right)[0]
+    if (!nextExpiration) return undefined
+
+    const timeoutId = window.setTimeout(() => {
+      setData(null)
+      loadPortal()
+    }, Math.max(0, nextExpiration - Date.now() + 50))
+    return () => window.clearTimeout(timeoutId)
+  }, [active, data, loadPortal])
 
   const handleLogout = async () => {
     try {
@@ -281,12 +322,6 @@ function TeacherPortal({ user, onLogout, path, navigate }) {
           loadMenus={getTeacherMenus}
         />
       )
-      break
-    case 'Công việc & báo cáo':
-      page = <TeacherTasks tasks={data.tasks} isAvailable={data.availability.tasks} />
-      break
-    case 'Thông báo':
-      page = <TeacherNotifications notifications={data.notifications} isAvailable={data.availability.notifications} />
       break
     case 'Thông tin cá nhân':
       page = <ProfilePage onShowToast={setToast} />

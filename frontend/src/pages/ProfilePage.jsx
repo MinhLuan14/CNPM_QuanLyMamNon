@@ -21,6 +21,7 @@ import {
 import { authRequest, fetchCsrfToken, responseError } from '../api/auth';
 import Modal from '../components/Modal';
 import FormFieldError from '../components/FormFieldError';
+import TeacherAvatar from '../components/teacher/TeacherAvatar';
 import { clearFieldError, focusFirstInvalid, requiredText, validEmail, validVietnamesePhone, validateValues } from '../utils/formValidation';
 import './ProfilePage.css';
 
@@ -210,13 +211,18 @@ export default function ProfilePage({ onShowToast, linkedChildren = [] }) {
   }
 
   const isParent = profile.vaiTro === 'PHUHUYNH';
+  const isTeacher = profile.vaiTro === 'GIAOVIEN';
   const roleName = isParent ? 'Phụ huynh' : 'Giáo viên';
 
   return (
     <div className={`profile-page${isParent ? ' parent-profile-page' : ''}`}>
       <section className="profile-card">
         <div className="profile-hero">
-          <div className="profile-avatar"><UserRound size={29} /></div>
+          {isTeacher ? (
+            <TeacherAvatar className="profile-avatar" imageUrl={profile.anhDaiDien} name={profile.hoTen} />
+          ) : (
+            <div className="profile-avatar"><UserRound size={29} /></div>
+          )}
           <div className="profile-identity">
             <h3>{display(profile.hoTen)}</h3>
             <span>{roleName}</span>

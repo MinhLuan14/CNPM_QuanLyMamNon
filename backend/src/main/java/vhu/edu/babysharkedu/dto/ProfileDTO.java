@@ -15,5 +15,6 @@ public record ProfileDTO(
         String diaChiLH,
         String trinhDoChuyenMon,
         List<PhuHuynhTreDTO> treEm,
-        List<PhanCongGiaoVienDTO> phanCong) {
+        List<PhanCongGiaoVienDTO> phanCong,
+        String anhDaiDien) {
 }

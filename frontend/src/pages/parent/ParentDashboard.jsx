@@ -1,13 +1,13 @@
 import {
   ArrowRight,
   Baby,
-  Bell,
   CalendarDays,
   CheckCircle2,
   Clock3,
   Utensils,
   Wallet,
 } from 'lucide-react'
+import ParentChildAvatar from '../../components/parent/ParentChildAvatar'
 
 const money = (value) => `${new Intl.NumberFormat('vi-VN').format(value ?? 0)} ₫`
 const localDate = (value) => {
@@ -49,16 +49,11 @@ export default function ParentDashboard({ portal, onNavigate }) {
             <span>Cần thanh toán</span>
             <strong>{portal.availability.invoices ? money(remainingTotal) : 'Chưa cập nhật'}</strong>
           </div>
-          <div className="parent-welcome-quick-item">
-            <Bell size={23} />
-            <span>Thông báo mới</span>
-            <strong>{portal.availability.notifications ? portal.notifications.length : 'Chưa cập nhật'}</strong>
-          </div>
         </div>
       </section>
 
       <div className="parent-dashboard-grid">
-        <section className="parent-panel parent-dashboard-panel">
+        <section className="parent-panel parent-dashboard-panel parent-dashboard-children">
           <div className="parent-panel-heading">
             <div><Baby size={23} /><h3>Thông tin của bé</h3></div>
             <button type="button" className="parent-text-action" onClick={() => onNavigate('Hồ sơ của bé')}>
@@ -69,9 +64,7 @@ export default function ParentDashboard({ portal, onNavigate }) {
             <div className="parent-child-list">
               {portal.children.map((child) => (
                 <article className="parent-child-summary" key={child.id}>
-                  <span className="parent-child-avatar" aria-hidden="true">
-                    {child.firstName?.trim().slice(0, 1) || child.fullName?.trim().slice(0, 1) || '—'}
-                  </span>
+                  <ParentChildAvatar child={child} className="parent-child-avatar" />
                   <div className="parent-child-info">
                     <strong>{child.fullName}</strong>
                     <span>{child.className || 'Chưa phân lớp'}</span>
@@ -152,40 +145,6 @@ export default function ParentDashboard({ portal, onNavigate }) {
           )}
         </section>
 
-        <section className="parent-panel parent-dashboard-panel">
-          <div className="parent-panel-heading">
-            <div><Bell size={23} /><h3>Thông báo từ nhà trường</h3></div>
-            <button type="button" className="parent-text-action" onClick={() => onNavigate('Thông báo')}>
-              Xem tất cả <ArrowRight size={18} />
-            </button>
-          </div>
-          {portal.availability.notifications && portal.notifications.length ? (
-            <div className="parent-notice-list">
-              {portal.notifications.slice(0, 3).map((notice) => (
-                <article className="parent-notice-item" key={notice.id}>
-                  <span className="parent-notice-icon"><Bell size={20} /></span>
-                  <div>
-                    <strong>{notice.title}</strong>
-                    <p>{notice.content}</p>
-                    <small>{notice.type} · {notice.time}</small>
-                  </div>
-                </article>
-              ))}
-            </div>
-          ) : (
-            <div className="parent-empty parent-dashboard-empty">
-              <Bell size={27} />
-              <div>
-                <strong>
-                  {portal.availability.notifications
-                    ? 'Chưa có thông báo mới'
-                    : 'Thông tin thông báo chưa được cập nhật'}
-                </strong>
-                <p>Thông báo sẽ xuất hiện tại đây khi nhà trường cập nhật.</p>
-              </div>
-            </div>
-          )}
-        </section>
       </div>
     </div>
   )

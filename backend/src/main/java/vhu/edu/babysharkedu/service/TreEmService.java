@@ -42,24 +42,32 @@ public class TreEmService {
     private final HocPhiRepository hocPhiRepository;
     private final PhuHuynhTreRepository phuHuynhTreRepository;
     private final PhuHuynhRepository phuHuynhRepository;
+    private final GiaoVienPhanCongAccessService giaoVienPhanCongAccessService;
 
     public TreEmService(
             TreEmRepository treEmRepository,
             LopHocRepository lopHocRepository,
             HocPhiRepository hocPhiRepository,
             PhuHuynhTreRepository phuHuynhTreRepository,
-            PhuHuynhRepository phuHuynhRepository) {
+            PhuHuynhRepository phuHuynhRepository,
+            GiaoVienPhanCongAccessService giaoVienPhanCongAccessService) {
         this.treEmRepository = treEmRepository;
         this.lopHocRepository = lopHocRepository;
         this.hocPhiRepository = hocPhiRepository;
         this.phuHuynhTreRepository = phuHuynhTreRepository;
         this.phuHuynhRepository = phuHuynhRepository;
+        this.giaoVienPhanCongAccessService = giaoVienPhanCongAccessService;
     }
 
     @Transactional(readOnly = true)
     public List<TreEmDTO> layTatCa(Authentication authentication) {
-        if (laNhanVien(authentication)) {
+        if (laAdmin(authentication)) {
             return treEmRepository.findAllByOrderByMaTre().stream().map(this::toDTO).toList();
+        }
+        if (laGiaoVien(authentication)) {
+            return treEmRepository.findAllByLopHocMaLopHocInOrderByMaTre(
+                            giaoVienPhanCongAccessService.currentClassIds(authentication))
+                    .stream().map(this::toDTO).toList();
         }
         Integer maPhuHuynh = timMaPhuHuynh(authentication);
         return phuHuynhTreRepository
@@ -70,7 +78,13 @@ public class TreEmService {
     @Transactional(readOnly = true)
     public TreEmDTO layChiTiet(Integer maTre, Authentication authentication) {
         TreEm treEm = timTre(maTre);
-        if (!laNhanVien(authentication)) {
+        if (laGiaoVien(authentication)) {
+            if (treEm.getLopHoc() == null) {
+                throw new AccessDeniedException("Bạn không có quyền xem thông tin của trẻ này.");
+            }
+            giaoVienPhanCongAccessService.requireClassAccess(
+                    authentication, treEm.getLopHoc().getMaLopHoc());
+        } else if (!laAdmin(authentication)) {
             Integer maPhuHuynh = timMaPhuHuynh(authentication);
             if (!phuHuynhTreRepository.existsByPhuHuynhMaPhuHuynhAndTreEmMaTre(maPhuHuynh, maTre)) {
                 throw new AccessDeniedException("Bạn không có quyền xem thông tin của trẻ này.");
@@ -109,7 +123,7 @@ public class TreEmService {
     }
 
     @Transactional(readOnly = true)
-    public List<TreEmDTO> timKiem(String keyword) {
+    public List<TreEmDTO> timKiem(String keyword, Authentication authentication) {
         if (keyword == null || keyword.isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Vui lòng nhập từ khóa tìm kiếm.");
         }
@@ -129,11 +143,20 @@ public class TreEmService {
             }
         }
 
+        if (laGiaoVien(authentication)) {
+            var assignedClassIds = giaoVienPhanCongAccessService.currentClassIds(authentication);
+            return ketQua.values().stream()
+                    .filter(tre -> tre.getLopHoc() != null
+                            && assignedClassIds.contains(tre.getLopHoc().getMaLopHoc()))
+                    .map(this::toDTO)
+                    .toList();
+        }
         return ketQua.values().stream().map(this::toDTO).toList();
     }
 
     @Transactional(readOnly = true)
-    public List<TreEmDTO> layTheoLop(Integer maLopHoc) {
+    public List<TreEmDTO> layTheoLop(Integer maLopHoc, Authentication authentication) {
+        giaoVienPhanCongAccessService.requireClassAccess(authentication, maLopHoc);
         timLop(maLopHoc);
         return treEmRepository.findAllByLopHocMaLopHocOrderByMaTre(maLopHoc)
                 .stream().map(this::toDTO).toList();
@@ -321,10 +344,16 @@ public class TreEmService {
                 "/api/tre-em/" + treEm.getMaTre() + "/anh-dai-dien");
     }
 
-    private boolean laNhanVien(Authentication authentication) {
+    private boolean laGiaoVien(Authentication authentication) {
         return authentication != null
                 && authentication.getPrincipal() instanceof TaiKhoanPrincipal principal
-                && ("ADMIN".equals(principal.getVaiTro()) || "GIAOVIEN".equals(principal.getVaiTro()));
+                && "GIAOVIEN".equals(principal.getVaiTro());
+    }
+
+    private boolean laAdmin(Authentication authentication) {
+        return authentication != null
+                && authentication.getPrincipal() instanceof TaiKhoanPrincipal principal
+                && "ADMIN".equals(principal.getVaiTro());
     }
 
     private Integer timMaPhuHuynh(Authentication authentication) {

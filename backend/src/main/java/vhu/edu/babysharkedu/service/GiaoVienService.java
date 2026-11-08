@@ -7,9 +7,11 @@ import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -27,6 +29,7 @@ import vhu.edu.babysharkedu.repository.GiaoVienDanhSachProjection;
 import vhu.edu.babysharkedu.repository.GiaoVienRepository;
 import vhu.edu.babysharkedu.repository.LopHocRepository;
 import vhu.edu.babysharkedu.repository.PhanCongGiaoVienRepository;
+import vhu.edu.babysharkedu.security.TaiKhoanPrincipal;
 
 @Service
 public class GiaoVienService {
@@ -64,6 +67,17 @@ public class GiaoVienService {
                 .findFirst()
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Không tìm thấy hồ sơ giáo viên."));
+    }
+
+    public boolean laTaiKhoanCuaGiaoVien(Integer maGiaoVien, Authentication authentication) {
+        if (authentication == null
+                || !(authentication.getPrincipal() instanceof TaiKhoanPrincipal principal)
+                || !"GIAOVIEN".equals(principal.getVaiTro())) {
+            return false;
+        }
+        return giaoVienRepository.findByTaiKhoanMaTaiKhoan(principal.getMaTaiKhoan())
+                .map(teacher -> Objects.equals(teacher.getMaGiaoVien(), maGiaoVien))
+                .orElse(false);
     }
 
     @Transactional

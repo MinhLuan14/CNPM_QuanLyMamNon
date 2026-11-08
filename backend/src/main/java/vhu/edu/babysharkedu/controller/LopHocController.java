@@ -7,6 +7,7 @@ import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -65,7 +66,9 @@ public class LopHocController {
 
     @GetMapping("/{id}/tre-em")
     @PreAuthorize("hasAnyRole('ADMIN', 'GIAOVIEN')")
-    public List<TreEmDTO> layTreEm(@PathVariable @Positive(message = "Mã lớp học phải là số nguyên dương.") Integer id) {
-        return lopHocService.layTreEm(id);
+    public List<TreEmDTO> layTreEm(
+            @PathVariable @Positive(message = "Mã lớp học phải là số nguyên dương.") Integer id,
+            Authentication authentication) {
+        return lopHocService.layTreEm(id, authentication);
     }
 }
